@@ -1,0 +1,419 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Панель администратора — Edu Keys</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { background: linear-gradient(135deg,#ffecd2,#fcb69f); font-family: Arial, sans-serif; }
+    .topbar { padding:12px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .container { max-width:1100px; margin:12px auto; display:grid; grid-template-columns: 1fr; gap:12px; padding:0 16px; }
+    .admin-grid { display:grid; grid-template-columns: 320px 1fr; gap:12px; align-items:start; }
+    .panel { background:#fffbea; padding:14px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.06); }
+    .tabs { display:flex; gap:8px; margin-bottom:12px; }
+    .tab { padding:8px 12px; border-radius:10px; cursor:pointer; background:#ffd9b3; }
+    .tab.active { background:#ffb374; color:#fff; font-weight:700; }
+    .list { max-height:520px; overflow:auto; padding-right:6px; }
+    .item { padding:8px; border-bottom:1px dashed #eee; display:flex; justify-content:space-between; align-items:center; }
+    label{display:block;margin-top:8px;font-weight:600}
+    input, select, textarea { width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px }
+    .small { color:#666; font-size:13px }
+    .horizontal { display:flex; gap:8px; align-items:center }
+    .danger { background:#ff6b6b; color:white }
+    .btn.small { padding:6px 8px; font-size:13px; border-radius:8px }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div style="display:flex;gap:12px;align-items:center;">
+      <a href="/profile.html" class="btn secondary">Назад в профиль</a>
+      <h3 style="margin:0">Панель администратора</h3>
+    </div>
+    <div class="small">Вход как администратор</div>
+  </div>
+
+  <div class="container">
+    <div class="admin-grid">
+      <div class="panel">
+        <div class="tabs">
+          <div id="tabTasks" class="tab active">Управление заданиями</div>
+          <div id="tabUsers" class="tab">Управление пользователями</div>
+        </div>
+
+        <!-- Список заданий -->
+        <div id="tasksPane" class="pane">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>Список заданий</strong>
+            <button id="btnNewTask" class="btn small">Создать новое</button>
+          </div>
+          <div class="list" id="tasksList" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Список пользователей -->
+        <div id="usersPane" class="pane" style="display:none">
+          <strong>Пользователи</strong>
+          <div class="list" id="usersList" style="margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="editorPanel">
+        <h4 id="editorTitle">Создать задание</h4>
+
+        <label>Месяц</label>
+        <select id="monthIndex">
+          <option value="1">1 — Сентябрь</option>
+          <option value="2">2 — Октябрь</option>
+          <option value="3">3 — Ноябрь</option>
+          <option value="4">4 — Декабрь</option>
+          <option value="5">5 — Январь</option>
+          <option value="6">6 — Февраль</option>
+          <option value="7">7 — Март</option>
+        </select>
+
+        <label>Название</label>
+        <input id="taskTitleInput" type="text" placeholder="Например: Тест по грамматике" />
+
+        <label>Тип задания</label>
+        <select id="taskType">
+          <option value="mcq">MCQ — тест</option>
+          <option value="fill">Fill — пропуски</option>
+          <option value="crossword">Crossword — кроссворд</option>
+        </select>
+
+        <label>Проходной процент</label>
+        <input id="passingScore" type="number" value="80" />
+
+        <!-- MCQ builder -->
+        <div id="mcqBuilder" style="margin-top:10px">
+          <strong>Вопросы</strong>
+          <div id="questionsContainer"></div>
+          <div style="margin-top:8px"><button id="addQuestionBtn" class="btn small">Добавить вопрос</button></div>
+        </div>
+
+        <!-- Fill builder -->
+        <div id="fillBuilder" style="margin-top:10px; display:none">
+          <label>Текст с ____</label>
+          <textarea id="fillText" rows="4"></textarea>
+          <label>Правильный ответ</label>
+          <input id="fillAnswer" type="text" />
+        </div>
+
+        <!-- Crossword builder -->
+        <div id="crossBuilder" style="margin-top:10px; display:none">
+          <label>URL картинки</label>
+          <input id="crossImage" type="text" />
+          <label>Правильный ответ</label>
+          <input id="crossAnswer" />
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button id="saveTaskBtn" class="btn">Сохранить задание</button>
+          <button id="cancelEditBtn" class="btn secondary">Отмена</button>
+        </div>
+
+        <hr style="margin:12px 0">
+
+        <div id="taskMetaBox" style="display:none">
+          <strong>Метаданные</strong>
+          <div id="metaArea" class="small" style="margin-top:8px"></div>
+          <div style="margin-top:8px">
+            <button id="deleteTaskBtn" class="btn danger small">Удалить задание</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+
+    // UI refs
+    const tabTasks = document.getElementById('tabTasks')
+    const tabUsers = document.getElementById('tabUsers')
+    const tasksPane = document.getElementById('tasksPane')
+    const usersPane = document.getElementById('usersPane')
+    const tasksList = document.getElementById('tasksList')
+    const usersList = document.getElementById('usersList')
+    const btnNewTask = document.getElementById('btnNewTask')
+
+    const taskType = document.getElementById('taskType')
+    const mcqBuilder = document.getElementById('mcqBuilder')
+    const fillBuilder = document.getElementById('fillBuilder')
+    const crossBuilder = document.getElementById('crossBuilder')
+
+    const questionsContainer = document.getElementById('questionsContainer')
+    const addQuestionBtn = document.getElementById('addQuestionBtn')
+    const saveTaskBtn = document.getElementById('saveTaskBtn')
+    const cancelEditBtn = document.getElementById('cancelEditBtn')
+    const deleteTaskBtn = document.getElementById('deleteTaskBtn')
+    const editorTitle = document.getElementById('editorTitle')
+    const taskMetaBox = document.getElementById('taskMetaBox')
+    const metaArea = document.getElementById('metaArea')
+
+    let editingId = null
+
+    // tabs
+    tabTasks.addEventListener('click', ()=> { showTab('tasks') })
+    tabUsers.addEventListener('click', ()=> { showTab('users') })
+    function showTab(t){
+      if (t==='tasks') {
+        tabTasks.classList.add('active'); tabUsers.classList.remove('active')
+        tasksPane.style.display = ''; usersPane.style.display = 'none'
+      } else {
+        tabUsers.classList.add('active'); tabTasks.classList.remove('active')
+        tasksPane.style.display = 'none'; usersPane.style.display = ''
+      }
+    }
+
+    // ensure admin
+    async function ensureAdmin(){
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { window.location.href = '/login.html'; return false }
+      const { data: profile, error } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single()
+      if (error || !profile?.is_admin) { alert('Нет прав администратора'); window.location.href = '/profile.html'; return false }
+      return true
+    }
+
+    // tasks list
+    async function loadTasks(){
+      if (!await ensureAdmin()) return
+      const { data: tasks, error } = await supabase.from('tasks').select('*').order('created_at', { ascending:false })
+      if (error) { console.error(error); return }
+      tasksList.innerHTML = ''
+      tasks.forEach(t => {
+        const div = document.createElement('div'); div.className='item'
+        div.innerHTML = `<div><b>${t.title}</b><div class="small">${t.month_name || 'Месяц '+t.month_index} • ${t.type} • pass ${t.passing_score}%</div></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn small" data-id="${t.id}" data-act="edit">Edit</button>
+            <button class="btn small" data-id="${t.id}" data-act="fill">View</button>
+          </div>`
+        tasksList.appendChild(div)
+      })
+      // attach listeners
+      tasksList.querySelectorAll('button').forEach(b=>{
+        b.addEventListener('click', async (e)=>{
+          const id = b.dataset.id; const act = b.dataset.act
+          if (act === 'edit') { loadTaskIntoEditor(id) }
+          else if (act === 'fill') { viewTask(id) }
+        })
+      })
+    }
+
+    function viewTask(id){
+      window.open(`/task.html?id=${id}`, '_blank')
+    }
+
+    // load single task into editor
+    async function loadTaskIntoEditor(id){
+      if (!await ensureAdmin()) return
+      const { data: task, error } = await supabase.from('tasks').select('*').eq('id', id).single()
+      if (error) { alert('Ошибка загрузки задания'); console.error(error); return }
+      editingId = id
+      editorTitle.textContent = 'Редактировать задание'
+      document.getElementById('monthIndex').value = task.month_index
+      document.getElementById('taskTitleInput').value = task.title
+      document.getElementById('taskType').value = task.type
+      document.getElementById('passingScore').value = task.passing_score ?? 80
+      // show correct builder
+      taskType.dispatchEvent(new Event('change'))
+
+      // parse content if string
+      if (typeof task.content === 'string') {
+        try { task.content = JSON.parse(task.content) } catch(e){ console.warn(e) }
+      }
+
+      if (task.type === 'mcq') {
+        questionsContainer.innerHTML = ''
+        (task.content?.questions || []).forEach(q => addQuestionBlock(q))
+      } else if (task.type === 'fill') {
+        document.getElementById('fillText').value = task.content?.text || ''
+        document.getElementById('fillAnswer').value = task.content?.answer || ''
+      } else if (task.type === 'crossword') {
+        document.getElementById('crossImage').value = task.content?.image || ''
+        document.getElementById('crossAnswer').value = task.content?.answer || ''
+      }
+      taskMetaBox.style.display = 'block'
+      metaArea.textContent = `ID: ${task.id}\nСоздано: ${task.created_at}\nПоследнее обновление: ${task.updated_at ?? '—'}`
+    }
+
+    // new task
+    btnNewTask.addEventListener('click', ()=> {
+      editingId = null
+      editorTitle.textContent = 'Создать задание'
+      document.getElementById('taskTitleInput').value = ''
+      document.getElementById('passingScore').value = 80
+      document.getElementById('monthIndex').value = 1
+      document.getElementById('taskType').value = 'mcq'
+      taskType.dispatchEvent(new Event('change'))
+      questionsContainer.innerHTML = ''
+      addQuestionBlock()
+      taskMetaBox.style.display = 'none'
+    })
+
+    // add question
+    addQuestionBtn.addEventListener('click', ()=> addQuestionBlock())
+
+    function addQuestionBlock(data){
+      const idx = questionsContainer.children.length
+      const wrapper = document.createElement('div'); wrapper.className='q-block'; wrapper.style.background='#fff'
+      wrapper.style.padding='8px'; wrapper.style.marginTop='8px'; wrapper.dataset.idx=idx
+      wrapper.innerHTML = `
+        <label>Вопрос</label>
+        <input class="q-text" placeholder="Текст вопроса">
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input class="q-points" type="number" value="${data?.points ?? 1}" style="width:90px">
+          <input class="q-answer" type="number" value="${data?.answer ?? 0}" style="width:90px">
+          <button class="btn small" data-act="addOpt">+ Вариант</button>
+          <button class="btn small danger" data-act="delQ">Удалить</button>
+        </div>
+        <div class="options" style="margin-top:8px"></div>
+      `
+      const opts = wrapper.querySelector('.options')
+      questionsContainer.appendChild(wrapper)
+
+      wrapper.querySelector('[data-act="addOpt"]').addEventListener('click', ()=>{
+        const row = document.createElement('div'); row.className='option-row'; row.style.display='flex'; row.style.gap='8px'; row.style.marginTop='6px'
+        row.innerHTML = `<input class="opt-text" placeholder="Вариант"><button class="btn small danger" data-act="delOpt">—</button>`
+        opts.appendChild(row)
+        row.querySelector('[data-act="delOpt"]').addEventListener('click', ()=> row.remove())
+      })
+      wrapper.querySelector('[data-act="delQ"]').addEventListener('click', ()=> wrapper.remove())
+
+      // populate if data provided
+      if (data) {
+        wrapper.querySelector('.q-text').value = data.q || ''
+        wrapper.querySelector('.q-points').value = data.points ?? 1
+        wrapper.querySelector('.q-answer').value = data.answer ?? 0
+        opts.innerHTML = ''
+        (data.options || []).forEach(opt => {
+          const row = document.createElement('div'); row.className='option-row'; row.style.display='flex'; row.style.gap='8px'; row.style.marginTop='6px'
+          row.innerHTML = `<input class="opt-text" value="${opt}"><button class="btn small danger" data-act="delOpt">—</button>`
+          opts.appendChild(row)
+          row.querySelector('[data-act="delOpt"]').addEventListener('click', ()=> row.remove())
+        })
+      } else {
+        // add two default options
+        wrapper.querySelector('[data-act="addOpt"]').click()
+        wrapper.querySelector('[data-act="addOpt"]').click()
+      }
+    }
+
+    // type change
+    taskType.addEventListener('change', (e)=>{
+      const v = e.target.value
+      mcqBuilder.style.display = v==='mcq' ? '' : 'none'
+      fillBuilder.style.display = v==='fill' ? '' : 'none'
+      crossBuilder.style.display = v==='crossword' ? '' : 'none'
+    })
+
+    // save task (create or update)
+    saveTaskBtn.addEventListener('click', async ()=>{
+      if (!await ensureAdmin()) return
+      const month_index = parseInt(document.getElementById('monthIndex').value)
+      const month_name = document.getElementById('monthIndex').selectedOptions[0].text.split('—')[1].trim()
+      const title = document.getElementById('taskTitleInput').value.trim()
+      const type = document.getElementById('taskType').value
+      const passing_score = parseInt(document.getElementById('passingScore').value || '80')
+      let content = {}
+
+      if (type === 'mcq') {
+        const qs = Array.from(questionsContainer.querySelectorAll('.q-block'))
+        const questions = qs.map(b=>{
+          const qText = b.querySelector('.q-text').value
+          const points = parseInt(b.querySelector('.q-points').value || '1')
+          const answer = parseInt(b.querySelector('.q-answer').value || '0')
+          const options = Array.from(b.querySelectorAll('.opt-text')).map(i=>i.value)
+          return { q: qText, options, answer, points }
+        })
+        content = { questions }
+      } else if (type === 'fill') {
+        content = { text: document.getElementById('fillText').value, answer: document.getElementById('fillAnswer').value }
+      } else if (type === 'crossword') {
+        content = { image: document.getElementById('crossImage').value, answer: document.getElementById('crossAnswer').value }
+      }
+
+      try {
+        if (editingId) {
+          const { error } = await supabase.from('tasks').update({ month_index, month_name, title, type, content, passing_score }).eq('id', editingId)
+          if (error) throw error
+          alert('Задание обновлено')
+        } else {
+          const { error } = await supabase.from('tasks').insert([{ month_index, month_name, title, type, content, passing_score }])
+          if (error) throw error
+          alert('Задание создано')
+        }
+        await loadTasks()
+        resetEditor()
+      } catch (err) {
+        console.error(err); alert('Ошибка сохранения: ' + (err.message || JSON.stringify(err)))
+      }
+    })
+
+    deleteTaskBtn.addEventListener('click', async ()=>{
+      if (!editingId) return
+      if (!confirm('Удалить задание?')) return
+      await supabase.from('tasks').delete().eq('id', editingId)
+      alert('Удалено')
+      editingId = null
+      resetEditor()
+      loadTasks()
+    })
+
+    cancelEditBtn.addEventListener('click', () => { editingId=null; resetEditor() })
+
+    function resetEditor(){
+      editorTitle.textContent = 'Создать задание'
+      document.getElementById('taskTitleInput').value = ''
+      document.getElementById('passingScore').value = 80
+      document.getElementById('monthIndex').value = 1
+      document.getElementById('taskType').value = 'mcq'
+      taskType.dispatchEvent(new Event('change'))
+      questionsContainer.innerHTML = ''
+      addQuestionBlock()
+      taskMetaBox.style.display = 'none'
+    }
+
+    // users
+    async function loadUsers(){
+      if (!await ensureAdmin()) return
+      const { data: users, error } = await supabase.from('profiles').select('id,full_name,created_at,is_admin').order('created_at',{ascending:false})
+      if (error) { console.error(error); return }
+      usersList.innerHTML = ''
+      users.forEach(u=>{
+        const row = document.createElement('div'); row.className='item'
+        row.innerHTML = `<div><b>${u.full_name || '(без имени)'}</b><div class="small">id: ${u.id}</div></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn small" data-id="${u.id}" data-act="makeadmin">${u.is_admin ? 'Admin' : 'Make Admin'}</button>
+            <button class="btn small danger" data-id="${u.id}" data-act="reset">Reset</button>
+          </div>`
+        usersList.appendChild(row)
+      })
+      usersList.querySelectorAll('button').forEach(b=>{
+        b.addEventListener('click', async ()=>{
+          const id = b.dataset.id, act = b.dataset.act
+          if (act === 'makeadmin') {
+            await supabase.from('profiles').update({ is_admin:true }).eq('id', id)
+            loadUsers()
+          } else if (act === 'reset') {
+            if (!confirm('Сбросить попытки и ключи у пользователя?')) return
+            await supabase.from('attempts').delete().eq('user_id', id)
+            await supabase.from('keys').delete().eq('user_id', id)
+            alert('Сброшено')
+          }
+        })
+      })
+    }
+
+    // initial
+    (async ()=>{
+      if (!await ensureAdmin()) return
+      await loadTasks()
+      await loadUsers()
+      resetEditor()
+    })()
+  </script>
+</body>
+</html>

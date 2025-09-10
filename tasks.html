@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Задания</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .task-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; width:100%; }
+    .task-card { padding:12px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.06); text-align:left }
+    .task-card button { margin-top:8px }
+  </style>
+</head>
+<body class="centered">
+  <div class="card" style="width:900px; max-width:95vw;">
+    <h2>Задания</h2>
+    <div id="tasksContainer" class="task-grid"></div>
+    <div style="margin-top:12px"><button onclick="window.location.href='/profile.html'" class="btn secondary">Назад в профиль</button></div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+
+    const months = ["Сентябрь","Октябрь","Ноябрь","Декабрь","Январь","Февраль","Март"]
+
+    function getCurrentStudyIndex(){
+      const now = new Date()
+      const m = now.getMonth()+1 //1..12
+      const map = {9:1,10:2,11:3,12:4,1:5,2:6,3:7}
+      return map[m] || 1
+    }
+
+    async function loadTasks(){
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { window.location.href = '/login.html'; return }
+
+      const { data: tasks } = await supabase.from('tasks').select('*').order('month_index')
+      const { data: keys } = await supabase.from('keys').select('*').eq('user_id', user.id)
+      const { data: attempts } = await supabase.from('attempts').select('*').eq('user_id', user.id)
+
+      const container = document.getElementById('tasksContainer')
+      container.innerHTML = ''
+      const maxAvail = getCurrentStudyIndex()
+
+      tasks.forEach(t=>{
+        const div = document.createElement('div'); div.className='task-card'
+        div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><b>${t.title}</b><div class="small">${t.month_name || months[t.month_index-1]}</div></div>
+          <div style="text-align:right"><div class="small">pass ${t.passing_score}%</div></div></div>`
+        const hasKey = keys?.some(k=>k.month_index===t.month_index)
+        const passedAttempt = attempts?.some(a=>a.task_id===t.id && a.passed)
+        const btn = document.createElement('button'); btn.className='btn'
+        if (hasKey || passedAttempt) {
+          btn.textContent = 'Выполнено ✅'; btn.disabled = true; btn.classList.add('secondary')
+        } else if (t.month_index <= maxAvail) {
+          btn.textContent = 'Начать'; btn.addEventListener('click', ()=> window.location.href=`/task.html?id=${t.id}`)
+        } else {
+          btn.textContent = 'Недоступно ⏳'; btn.disabled = true; btn.classList.add('secondary')
+        }
+        div.appendChild(btn)
+        container.appendChild(div)
+      })
+    }
+
+    loadTasks()
+  </script>
+</body>
+</html>

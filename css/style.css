@@ -1,0 +1,122 @@
+body {
+  font-family: Comic Sans MS, Arial, sans-serif;
+  background: linear-gradient(135deg, #ffecd2, #fcb69f);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.card {
+  background: #fffbea;
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  width: 360px;
+  text-align: center;
+  animation: float 2s infinite ease-in-out;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+h2 {
+  margin-bottom: 16px;
+  color: #ff6f61;
+}
+
+form input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px;
+  border: 2px solid #ffb347;
+  border-radius: 12px;
+}
+
+.btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 16px;
+  background: #ff6f61;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+  transition: transform 0.2s, background 0.3s;
+}
+.btn:hover {
+  transform: scale(1.05);
+  background: #ff4a3d;
+}
+.btn.secondary {
+  background: #7d7dff;
+}
+.btn.secondary:hover {
+  background: #5b5bdb;
+}
+
+.keys {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.key {
+  padding: 10px 14px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  transition: transform 0.2s, background 0.3s;
+}
+.key.active {
+  background: #c8f7c5;
+  border-color: #3a8f3a;
+  font-weight: bold;
+}
+.key.inactive {
+  background: #f0f0f0;
+  color: #aaa;
+}
+.key.active:hover {
+  transform: scale(1.1) rotate(-2deg);
+  background: #b0f2ac;
+}
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.5);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.modal.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.modal-content {
+  background: #fffbea;
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  width: 320px;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  color: #ff6f61;
+}
