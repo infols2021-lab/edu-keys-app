@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html lang="ru">
 <head>
   <meta charset="utf-8">
   <title>Задание — Edu Keys</title>
@@ -28,409 +28,475 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .completed-message { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
     .time-info { background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 14px; }
+    .error { 
+      background: #ffebee; 
+      color: #c62828; 
+      padding: 20px; 
+      border-radius: 8px; 
+      margin: 20px; 
+      text-align: center; 
+      display: none; 
+    }
+    .config-loading { 
+      text-align: center; 
+      padding: 40px; 
+    }
   </style>
+  
+  <script src="/load-config.js"></script>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">
-        <div class="mark">EK</div>
-        <div>
-          <h3 id="pageTitle">Задание</h3>
-          <div class="small-muted" id="subTitle"></div>
+  <div id="configLoading" class="config-loading">
+    <div class="spinner"></div>
+    <p>🔄 Загружаем конфигурацию...</p>
+  </div>
+  
+  <div id="errorMessage" class="error"></div>
+  
+  <div id="mainContent" style="display: none;">
+    <div class="container">
+      <div class="header">
+        <div class="logo">
+          <div class="mark">EK</div>
+          <div>
+            <h3 id="pageTitle">Задание</h3>
+            <div class="small-muted" id="subTitle"></div>
+          </div>
+        </div>
+        <div class="nav">
+          <button class="btn" onclick="location.href='/tasks.html'">К заданиям</button>
         </div>
       </div>
-      <div class="nav">
-        <button class="btn" onclick="location.href='/tasks.html'">К заданиям</button>
+
+      <div class="card">
+        <div id="attemptWarning" class="attempt-warning" style="display: none;"></div>
+        <div id="timeInfo" class="time-info" style="display: none;"></div>
+        
+        <div id="taskLoading" class="loading" style="display: none;">
+          <div class="spinner"></div>
+          <p>Начинаем выполнение задания...</p>
+        </div>
+        
+        <div id="completedMessage" class="completed-message" style="display: none;">
+          <h3>Задание завершено</h3>
+          <p id="completedText"></p>
+          <button class="btn" onclick="location.href='/tasks.html'">Вернуться к заданиям</button>
+        </div>
+        
+        <div id="taskBody" class="task-content"></div>
+        
+        <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center;">
+          <button id="submitBtn" class="btn" style="display: none;">Отправить ответ</button>
+          <div id="timer" class="timer" style="display: none;">00:00</div>
+          <button class="btn secondary" onclick="location.href='/tasks.html'">Назад к заданиям</button>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div id="attemptWarning" class="attempt-warning" style="display: none;"></div>
-      <div id="timeInfo" class="time-info" style="display: none;"></div>
-      
-      <div id="loading" class="loading" style="display: none;">
-        <div class="spinner"></div>
-        <p>Начинаем выполнение задания...</p>
-      </div>
-      
-      <div id="completedMessage" class="completed-message" style="display: none;">
-        <h3>Задание завершено</h3>
-        <p id="completedText"></p>
-        <button class="btn" onclick="location.href='/tasks.html'">Вернуться к заданиям</button>
-      </div>
-      
-      <div id="taskBody" class="task-content"></div>
-      
-      <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center;">
-        <button id="submitBtn" class="btn" style="display: none;">Отправить ответ</button>
-        <div id="timer" class="timer" style="display: none;">00:00</div>
-        <button class="btn secondary" onclick="location.href='/tasks.html'">Назад к заданиям</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="modal" style="display: none;">
-    <div class="modal-body card">
-      <h3 id="modalTitle"></h3>
-      <p id="modalText" style="white-space: pre-line;"></p>
-      <div style="margin-top: 12px; text-align: center;">
-        <button class="btn" id="modalOk">ОК</button>
+    <div class="modal-backdrop" id="modal" style="display: none;">
+      <div class="modal-body card">
+        <h3 id="modalTitle"></h3>
+        <p id="modalText" style="white-space: pre-line;"></p>
+        <div style="margin-top: 12px; text-align: center;">
+          <button class="btn" id="modalOk">ОК</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="/config.js"></script>
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-
-    const params = new URLSearchParams(window.location.search)
-    const taskId = params.get('id')
-    let task = null
-    let user = null
-    let currentAttemptId = null
-    let attemptStarted = false
-    let startTime = null
-    let timerInterval = null
-    let timeLimit = 60
-
-    const submitBtn = document.getElementById('submitBtn')
-    const taskBody = document.getElementById('taskBody')
-    const attemptWarning = document.getElementById('attemptWarning')
-    const timeInfo = document.getElementById('timeInfo')
-    const timerElement = document.getElementById('timer')
-    const loadingElement = document.getElementById('loading')
-    const completedMessage = document.getElementById('completedMessage')
-    const completedText = document.getElementById('completedText')
-
-    function showModal(title, text) {
-      document.getElementById('modalTitle').textContent = title
-      document.getElementById('modalText').textContent = text
-      document.getElementById('modal').style.display = 'flex'
+    document.getElementById('configLoading').style.display = 'block';
+    
+    function showError(message) {
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('errorMessage').style.display = 'block';
+      document.getElementById('configLoading').style.display = 'none';
     }
-
-    document.getElementById('modalOk').addEventListener('click', () => {
-      document.getElementById('modal').style.display = 'none'
-      if (document.getElementById('modalTitle').textContent.includes('🎉')) {
-        window.location.href = '/tasks.html'
+    
+    function showContent() {
+      document.getElementById('mainContent').style.display = 'block';
+      document.getElementById('configLoading').style.display = 'none';
+      document.getElementById('errorMessage').style.display = 'none';
+    }
+    
+    async function initApp() {
+      if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+        showError('❌ Ошибка конфигурации. Переменные Supabase не загружены.');
+        return false;
       }
-    })
-
-    function startCountdown() {
-      if (!startTime) return
       
-      function updateTimer() {
-        const now = new Date()
-        const elapsed = Math.floor((now - startTime) / 1000)
-        const remaining = timeLimit * 60 - elapsed
+      try {
+        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+        const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
         
-        if (remaining <= 0) {
-          // Время вышло
-          clearInterval(timerInterval)
-          timerElement.textContent = "00:00"
-          timerElement.className = "timer danger"
-          submitBtn.disabled = true
-          submitBtn.textContent = "Время вышло!"
-          attemptWarning.innerHTML = '<strong>⏰ Время вышло!</strong> Задание автоматически отправлено.'
-          autoSubmit()
-        } else {
-          const minutes = Math.floor(remaining / 60)
-          const seconds = remaining % 60
-          timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+        const params = new URLSearchParams(window.location.search);
+        const taskId = params.get('id');
+        let task = null;
+        let user = null;
+        let currentAttemptId = null;
+        let attemptStarted = false;
+        let startTime = null;
+        let timerInterval = null;
+        let timeLimit = 60;
+
+        const submitBtn = document.getElementById('submitBtn');
+        const taskBody = document.getElementById('taskBody');
+        const attemptWarning = document.getElementById('attemptWarning');
+        const timeInfo = document.getElementById('timeInfo');
+        const timerElement = document.getElementById('timer');
+        const taskLoadingElement = document.getElementById('taskLoading');
+        const completedMessage = document.getElementById('completedMessage');
+        const completedText = document.getElementById('completedText');
+
+        function showModal(title, text) {
+          document.getElementById('modalTitle').textContent = title;
+          document.getElementById('modalText').textContent = text;
+          document.getElementById('modal').style.display = 'flex';
+        }
+
+        document.getElementById('modalOk').addEventListener('click', () => {
+          document.getElementById('modal').style.display = 'none';
+          if (document.getElementById('modalTitle').textContent.includes('🎉')) {
+            window.location.href = '/tasks.html';
+          }
+        });
+
+        function startCountdown() {
+          if (!startTime) return;
           
-          // Изменяем цвет таймера при малом остатке времени
-          if (remaining < 300) { // 5 минут
-            timerElement.className = "timer danger"
-          } else if (remaining < 600) { // 10 минут
-            timerElement.className = "timer warning"
+          function updateTimer() {
+            const now = new Date();
+            const elapsed = Math.floor((now - startTime) / 1000);
+            const remaining = timeLimit * 60 - elapsed;
+            
+            if (remaining <= 0) {
+              clearInterval(timerInterval);
+              timerElement.textContent = "00:00";
+              timerElement.className = "timer danger";
+              submitBtn.disabled = true;
+              submitBtn.textContent = "Время вышло!";
+              attemptWarning.innerHTML = '<strong>⏰ Время вышло!</strong> Задание автоматически отправлено.';
+              autoSubmit();
+            } else {
+              const minutes = Math.floor(remaining / 60);
+              const seconds = remaining % 60;
+              timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+              
+              if (remaining < 300) {
+                timerElement.className = "timer danger";
+              } else if (remaining < 600) {
+                timerElement.className = "timer warning";
+              }
+            }
+          }
+          
+          timerInterval = setInterval(updateTimer, 1000);
+          updateTimer();
+        }
+
+        async function autoSubmit() {
+          if (!task || !attemptStarted) return;
+
+          let answers = {};
+          
+          if (task.type === 'mcq') {
+            const questions = task.content?.questions || [];
+            
+            for (let i = 0; i < questions.length; i++) {
+              const selected = document.querySelector(`input[name="q${i}"]:checked`);
+              answers[i] = selected ? parseInt(selected.value) : -1;
+            }
+          }
+
+          try {
+            const { data, error } = await supabase.rpc('finish_attempt', {
+              _user_id: user.id,
+              _task_id: taskId,
+              _attempt_id: currentAttemptId,
+              _answers: answers
+            });
+
+            if (error) {
+              console.error('Auto-submit error:', error);
+              return;
+            }
+
+            const result = Array.isArray(data) ? data[0] : data;
+            
+            if (result.error) {
+              console.error('Auto-submit result error:', result.error);
+            } else {
+              taskBody.style.display = 'none';
+              submitBtn.style.display = 'none';
+              completedMessage.style.display = 'block';
+              completedText.textContent = result.message || '⏰ Время вышло! Задание автоматически отправлено.';
+            }
+          } catch (e) {
+            console.error('Auto-submission error:', e);
           }
         }
-      }
-      
-      timerInterval = setInterval(updateTimer, 1000)
-      updateTimer()
-    }
 
-    async function autoSubmit() {
-      if (!task || !attemptStarted) return
+        async function startAttempt() {
+          taskLoadingElement.style.display = 'block';
+          taskBody.style.display = 'none';
+          submitBtn.style.display = 'none';
 
-      let answers = {}
-      
-      if (task.type === 'mcq') {
-        const questions = task.content?.questions || []
-        
-        for (let i = 0; i < questions.length; i++) {
-          const selected = document.querySelector(`input[name="q${i}"]:checked`)
-          // ВАЖНОЕ ИСПРАВЛЕНИЕ: отправляем -1 для неотвеченных вопросов вместо 0
-          answers[i] = selected ? parseInt(selected.value) : -1
-        }
-      }
+          try {
+            const { data, error } = await supabase.rpc('start_attempt', {
+              _user_id: user.id,
+              _task_id: taskId
+            });
 
-      try {
-        const { data, error } = await supabase.rpc('finish_attempt', {
-          _user_id: user.id,
-          _task_id: taskId,
-          _attempt_id: currentAttemptId,
-          _answers: answers
-        })
+            if (error) throw error;
 
-        if (error) {
-          console.error('Auto-submit error:', error)
-          return
-        }
+            if (data.error) {
+              showModal('Ошибка', data.error);
+              return false;
+            }
 
-        const result = Array.isArray(data) ? data[0] : data
-        
-        if (result.error) {
-          console.error('Auto-submit result error:', result.error)
-        } else {
-          taskBody.style.display = 'none'
-          submitBtn.style.display = 'none'
-          completedMessage.style.display = 'block'
-          completedText.textContent = result.message || '⏰ Время вышло! Задание автоматически отправлено.'
-        }
-      } catch (e) {
-        console.error('Auto-submission error:', e)
-      }
-    }
-
-    async function startAttempt() {
-      loadingElement.style.display = 'block'
-      taskBody.style.display = 'none'
-      submitBtn.style.display = 'none'
-
-      try {
-        const { data, error } = await supabase.rpc('start_attempt', {
-          _user_id: user.id,
-          _task_id: taskId
-        })
-
-        if (error) throw error
-
-        if (data.error) {
-          showModal('Ошибка', data.error)
-          return false
+            currentAttemptId = data.attempt_id;
+            attemptStarted = true;
+            startTime = new Date();
+            
+            timeInfo.style.display = 'block';
+            timeInfo.innerHTML = `<strong>⏱️ Лимит времени:</strong> ${timeLimit} минут. Таймер запущен!`;
+            
+            taskLoadingElement.style.display = 'none';
+            taskBody.style.display = 'block';
+            submitBtn.style.display = 'inline-block';
+            attemptWarning.style.display = 'block';
+            attemptWarning.innerHTML = '<strong>⚠️ Внимание!</strong> Вы начали выполнение задания. Попытка списана. Следите за временем!';
+            timerElement.style.display = 'inline-block';
+            
+            startCountdown();
+            renderTask();
+            return true;
+          } catch (error) {
+            console.error('Ошибка начала попытки:', error);
+            if (error.message.includes('Попытка уже использована')) {
+              await showCompletedAttempt();
+            } else {
+              showModal('Ошибка', 'Не удалось начать попытку. Попробуйте позже.');
+            }
+            return false;
+          }
         }
 
-        currentAttemptId = data.attempt_id
-        attemptStarted = true
-        startTime = new Date()
+        async function showCompletedAttempt() {
+          const { data: attempt } = await supabase
+            .from('attempts')
+            .select('*')
+            .eq('task_id', taskId)
+            .eq('user_id', user.id)
+            .single();
+
+          if (attempt) {
+            taskLoadingElement.style.display = 'none';
+            taskBody.style.display = 'none';
+            submitBtn.style.display = 'none';
+            completedMessage.style.display = 'block';
+            
+            if (attempt.score === -1) {
+              completedText.textContent = 'Вы начали это задание, но не завершили его. Попытка считается использованной. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg';
+            } else if (attempt.score >= task.passing_score) {
+              completedText.textContent = `✅ Вы успешно выполнили это задание! Ваш результат: ${attempt.score}%`;
+            } else {
+              completedText.textContent = `❌ Вы уже выполняли это задание. Результат: ${attempt.score}%. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg`;
+            }
+          }
+        }
+
+        async function loadTask() {
+          const { data: { user: userData } } = await supabase.auth.getUser();
+          user = userData;
+          if (!user) {
+            location.href = '/login.html';
+            return;
+          }
+
+          const { data: taskData } = await supabase.from('tasks').select('*').eq('id', taskId).single();
+          if (!taskData) {
+            showModal('Ошибка', 'Задание не найдено');
+            return;
+          }
+          
+          task = taskData;
+          timeLimit = task.time_limit || 60;
+          
+          const { data: key } = await supabase
+            .from('keys')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('month_index', task.month_index)
+            .single();
+          
+          if (key) {
+            showCompletedAttempt();
+            completedText.textContent = '🎉 Вы уже получили ключ за этот месяц!';
+            return;
+          }
+
+          document.getElementById('pageTitle').textContent = task.title;
+          document.getElementById('subTitle').textContent = `Проходной балл: ${task.passing_score || 80}% • Лимит времени: ${timeLimit} мин`;
+
+          const { data: attempt } = await supabase
+            .from('attempts')
+            .select('*')
+            .eq('task_id', taskId)
+            .eq('user_id', user.id)
+            .single();
+
+          if (attempt) {
+            await showCompletedAttempt();
+          } else {
+            await startAttempt();
+          }
+        }
+
+        function renderTask() {
+          taskBody.innerHTML = '';
+          
+          if (task.type === 'mcq') {
+            const questions = task.content?.questions || [];
+            
+            questions.forEach((q, i) => {
+              const questionEl = document.createElement('div');
+              questionEl.className = 'question';
+              
+              let questionHTML = `<p><b>${i + 1}. ${escapeHtml(q.q)}</b></p>`;
+              
+              if (q.image) {
+                questionHTML += `
+                  <div class="question-image-container">
+                    <img src="${q.image}" alt="Изображение для вопроса" 
+                         class="question-image" 
+                         onerror="this.style.display='none'">
+                  </div>
+                `;
+              }
+              
+              questionHTML += `<div class="options">
+                ${q.options.map((opt, j) => `
+                  <label class="option">
+                    <input type="radio" name="q${i}" value="${j}">
+                    <span>${escapeHtml(opt)}</span>
+                  </label>
+                `).join('')}
+              </div>`;
+              
+              questionEl.innerHTML = questionHTML;
+              taskBody.appendChild(questionEl);
+            });
+          }
+
+          submitBtn.onclick = submitAnswers;
+        }
+
+        function escapeHtml(text) {
+          const div = document.createElement('div');
+          div.textContent = text;
+          return div.innerHTML;
+        }
+
+        async function submitAnswers() {
+          if (!task || !attemptStarted) return;
+
+          let answers = {};
+          
+          if (task.type === 'mcq') {
+            const questions = task.content?.questions || [];
+            
+            for (let i = 0; i < questions.length; i++) {
+              const selected = document.querySelector(`input[name="q${i}"]:checked`);
+              answers[i] = selected ? parseInt(selected.value) : null;
+              
+              if (answers[i] === null) {
+                showModal('Ошибка', 'Пожалуйста, ответьте на все вопросы перед отправкой.');
+                return;
+              }
+            }
+          }
+
+          try {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Проверяем ответы...';
+            
+            const { data, error } = await supabase.rpc('finish_attempt', {
+              _user_id: user.id,
+              _task_id: taskId,
+              _attempt_id: currentAttemptId,
+              _answers: answers
+            });
+
+            if (error) {
+              console.error('RPC Error:', error);
+              showModal('Ошибка', 'Не удалось отправить ответ. Попробуйте позже.');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Отправить ответ';
+              return;
+            }
+
+            clearInterval(timerInterval);
+
+            const result = Array.isArray(data) ? data[0] : data;
+            
+            if (result.error) {
+              showModal('Ошибка', result.error);
+            } else if (result.passed) {
+              taskBody.style.display = 'none';
+              submitBtn.style.display = 'none';
+              completedMessage.style.display = 'block';
+              completedText.textContent = result.message;
+            } else {
+              taskBody.style.display = 'none';
+              submitBtn.style.display = 'none';
+              completedMessage.style.display = 'block';
+              completedText.textContent = result.message;
+            }
+          } catch (e) {
+            console.error('Submission error:', e);
+            showModal('Ошибка', 'Неизвестная ошибка. Попробуйте позже.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Отправить ответ';
+          }
+        }
+
+        // Защита от потери данных при перезагрузке
+        window.addEventListener('beforeunload', (event) => {
+          if (attemptStarted && submitBtn.style.display !== 'none' && !submitBtn.disabled) {
+            event.preventDefault();
+            event.returnValue = 'У вас есть незавершенная попытка. Вы уверены, что хотите уйти?';
+          }
+        });
+
+        await loadTask();
+        showContent();
+        return true;
         
-        // Показываем информацию о времени
-        timeInfo.style.display = 'block'
-        timeInfo.innerHTML = `<strong>⏱️ Лимит времени:</strong> ${timeLimit} минут. Таймер запущен!`
-        
-        // Показываем интерфейс задания
-        loadingElement.style.display = 'none'
-        taskBody.style.display = 'block'
-        submitBtn.style.display = 'inline-block'
-        attemptWarning.style.display = 'block'
-        attemptWarning.innerHTML = '<strong>⚠️ Внимание!</strong> Вы начали выполнение задания. Попытка списана. Следите за временем!'
-        timerElement.style.display = 'inline-block'
-        
-        startCountdown()
-        renderTask()
-        return true
       } catch (error) {
-        console.error('Ошибка начала попытки:', error)
-        if (error.message.includes('Попытка уже использована')) {
-          await showCompletedAttempt()
-        } else {
-          showModal('Ошибка', 'Не удалось начать попытку. Попробуйте позже.')
-        }
-        return false
+        showError('❌ Ошибка загрузки задания: ' + error.message);
+        return false;
       }
     }
-
-    async function showCompletedAttempt() {
-      const { data: attempt } = await supabase
-        .from('attempts')
-        .select('*')
-        .eq('task_id', taskId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (attempt) {
-        loadingElement.style.display = 'none'
-        taskBody.style.display = 'none'
-        submitBtn.style.display = 'none'
-        completedMessage.style.display = 'block'
-        
-        if (attempt.score === -1) {
-          completedText.textContent = 'Вы начали это задание, но не завершили его. Попытка считается использованной. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg'
-        } else if (attempt.score >= task.passing_score) {
-          completedText.textContent = `✅ Вы успешно выполнили это задание! Ваш результат: ${attempt.score}%`
-        } else {
-          completedText.textContent = `❌ Вы уже выполняли это задание. Результат: ${attempt.score}%. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg`
-        }
+    
+    const configTimeout = setTimeout(() => {
+      if (!window.SUPABASE_URL) {
+        showError('❌ Таймаут загрузки конфигурации. Используем резервные значения...');
+        window.SUPABASE_URL = 'https://dtjhlanmwjpdcdxgzzyo.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY';
+        initApp();
       }
+    }, 5000);
+    
+    window.addEventListener('configLoaded', () => {
+      clearTimeout(configTimeout);
+      initApp();
+    });
+    
+    if (window.SUPABASE_URL) {
+      clearTimeout(configTimeout);
+      initApp();
     }
-
-    async function loadTask() {
-      const { data: { user: userData } } = await supabase.auth.getUser()
-      user = userData
-      if (!user) {
-        location.href = '/login.html'
-        return
-      }
-
-      const { data: taskData } = await supabase.from('tasks').select('*').eq('id', taskId).single()
-      if (!taskData) {
-        showModal('Ошибка', 'Задание не найдено')
-        return
-      }
-      
-      task = taskData
-      timeLimit = task.time_limit || 60
-      
-      const { data: key } = await supabase
-        .from('keys')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month_index', task.month_index)
-        .single()
-      
-      if (key) {
-        showCompletedAttempt()
-        completedText.textContent = '🎉 Вы уже получили ключ за этот месяц!'
-        return
-      }
-
-      document.getElementById('pageTitle').textContent = task.title
-      document.getElementById('subTitle').textContent = `Проходной балл: ${task.passing_score || 80}% • Лимит времени: ${timeLimit} мин`
-
-      const { data: attempt } = await supabase
-        .from('attempts')
-        .select('*')
-        .eq('task_id', taskId)
-        .eq('user_id', user.id)
-        .single()
-
-      if (attempt) {
-        await showCompletedAttempt()
-      } else {
-        await startAttempt()
-      }
-    }
-
-    function renderTask() {
-      taskBody.innerHTML = ''
-      
-      if (task.type === 'mcq') {
-        const questions = task.content?.questions || []
-        
-        questions.forEach((q, i) => {
-          const questionEl = document.createElement('div')
-          questionEl.className = 'question'
-          
-          let questionHTML = `<p><b>${i + 1}. ${escapeHtml(q.q)}</b></p>`
-          
-          if (q.image) {
-            questionHTML += `
-              <div class="question-image-container">
-                <img src="${q.image}" alt="Изображение для вопроса" 
-                     class="question-image" 
-                     onerror="this.style.display='none'">
-              </div>
-            `
-          }
-          
-          questionHTML += `<div class="options">
-            ${q.options.map((opt, j) => `
-              <label class="option">
-                <input type="radio" name="q${i}" value="${j}">
-                <span>${escapeHtml(opt)}</span>
-              </label>
-            `).join('')}
-          </div>`
-          
-          questionEl.innerHTML = questionHTML
-          taskBody.appendChild(questionEl)
-        })
-      }
-
-      submitBtn.onclick = submitAnswers
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div')
-      div.textContent = text
-      return div.innerHTML
-    }
-
-    async function submitAnswers() {
-      if (!task || !attemptStarted) return
-
-      let answers = {}
-      
-      if (task.type === 'mcq') {
-        const questions = task.content?.questions || []
-        
-        for (let i = 0; i < questions.length; i++) {
-          const selected = document.querySelector(`input[name="q${i}"]:checked`)
-          answers[i] = selected ? parseInt(selected.value) : null
-          
-          if (answers[i] === null) {
-            showModal('Ошибка', 'Пожалуйста, ответьте на все вопросы перед отправкой.')
-            return
-          }
-        }
-      }
-
-      try {
-        submitBtn.disabled = true
-        submitBtn.textContent = 'Проверяем ответы...'
-        
-        const { data, error } = await supabase.rpc('finish_attempt', {
-          _user_id: user.id,
-          _task_id: taskId,
-          _attempt_id: currentAttemptId,
-          _answers: answers
-        })
-
-        if (error) {
-          console.error('RPC Error:', error)
-          showModal('Ошибка', 'Не удалось отправить ответ. Попробуйте позже.')
-          submitBtn.disabled = false
-          submitBtn.textContent = 'Отправить ответ'
-          return
-        }
-
-        clearInterval(timerInterval)
-
-        const result = Array.isArray(data) ? data[0] : data
-        
-        if (result.error) {
-          showModal('Ошибка', result.error)
-        } else if (result.passed) {
-          taskBody.style.display = 'none'
-          submitBtn.style.display = 'none'
-          completedMessage.style.display = 'block'
-          completedText.textContent = result.message
-        } else {
-          taskBody.style.display = 'none'
-          submitBtn.style.display = 'none'
-          completedMessage.style.display = 'block'
-          completedText.textContent = result.message
-        }
-      } catch (e) {
-        console.error('Submission error:', e)
-        showModal('Ошибка', 'Неизвестная ошибка. Попробуйте позже.')
-        submitBtn.disabled = false
-        submitBtn.textContent = 'Отправить ответ'
-      }
-    }
-
-    // Защита от потери данных при перезагрузке
-    window.addEventListener('beforeunload', (event) => {
-      if (attemptStarted && submitBtn.style.display !== 'none' && !submitBtn.disabled) {
-        event.preventDefault()
-        event.returnValue = 'У вас есть незавершенная попытка. Вы уверены, что хотите уйти?'
-      }
-    })
-
-    document.addEventListener('DOMContentLoaded', loadTask)
   </script>
 </body>
 </html>
