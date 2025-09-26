@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Восстановление пароля</title>
+  <title>Восстановление пароля — Edu Keys</title>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     body {
       display:flex;
@@ -11,6 +12,8 @@
       height:100vh;
       background:linear-gradient(135deg,#81c784,#64b5f6);
       font-family:'Comic Sans MS', cursive, sans-serif;
+      margin: 0;
+      padding: 20px;
     }
     .reset-card {
       background:#fff;
@@ -22,12 +25,13 @@
       text-align:center;
       position:relative;
     }
-    input {
+    .reset-card input {
       width:100%;
       padding:10px;
       margin:8px 0;
       border:1px solid #ccc;
       border-radius:10px;
+      box-sizing: border-box;
     }
     .btn {
       background:#29b6f6;
@@ -37,6 +41,7 @@
       border-radius:10px;
       cursor:pointer;
       margin-top:10px;
+      width:100%;
       transition:transform 0.2s;
     }
     .btn:disabled {
@@ -46,13 +51,29 @@
     .btn:active {
       transform:scale(0.95);
     }
-    .msg {
-      margin-top:12px;
-      font-size:14px;
-      min-height:20px;
+    .link { margin-top:12px;font-size:14px; }
+    .link a { color:#42a5f5;text-decoration:none; }
+    .link a:hover { text-decoration:underline; }
+    .error { 
+      background: #ffebee; 
+      color: #c62828; 
+      padding: 10px; 
+      border-radius: 5px; 
+      margin: 10px 0; 
+      display: none; 
     }
-    .success { color:green; }
-    .error { color:red; }
+    .success { 
+      background: #e8f5e8; 
+      color: #2e7d32; 
+      padding: 10px; 
+      border-radius: 5px; 
+      margin: 10px 0; 
+      display: none; 
+    }
+    .loading { 
+      display: none;
+      margin: 10px 0;
+    }
     .reload-icon {
       display:none;
       position:absolute;
@@ -67,85 +88,133 @@
       transform:rotate(180deg) scale(1.2);
     }
   </style>
+  
+  <script src="/load-config.js"></script>
 </head>
 <body>
   <div class="reset-card">
     <div class="reload-icon" id="reloadBtn">🔄</div>
     <h2>Сброс пароля</h2>
-    <input type="email" id="email" placeholder="Email">
-    <button class="btn" id="resetBtn">Отправить письмо</button>
-    <div class="msg" id="message"></div>
+    
+    <div id="loading" class="loading">
+      <p>🔄 Загружаем конфигурацию...</p>
+    </div>
+    
+    <div id="errorMessage" class="error"></div>
+    <div id="successMessage" class="success"></div>
+    
+    <div id="resetForm" style="display: none;">
+      <input type="email" id="email" placeholder="Email">
+      <button class="btn" id="resetBtn">Отправить письмо</button>
+      <p class="link"><a href="/login.html">← Вернуться к входу</a></p>
+    </div>
   </div>
 
-  <script src="/config.js"></script>
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-
-    const btn = document.getElementById('resetBtn')
-    const msg = document.getElementById('message')
-    const reloadBtn = document.getElementById('reloadBtn')
-    const emailInput = document.getElementById('email')
-
-    function resetForm() {
-      emailInput.value = ""
-      msg.textContent = ""
-      msg.className = "msg"
-      btn.disabled = false
-      reloadBtn.style.display = "none"
+    document.getElementById('loading').style.display = 'block';
+    
+    function showError(message) {
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('errorMessage').style.display = 'block';
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
     }
-
-    reloadBtn.addEventListener('click', resetForm)
-
-    btn.addEventListener('click', async () => {
-      const email = emailInput.value.trim()
-      msg.textContent = ""
-
-      if (!email) {
-        msg.textContent = "Введите email!"
-        msg.className = "msg error"
-        return
+    
+    function showSuccess(message) {
+      document.getElementById('successMessage').textContent = message;
+      document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+    }
+    
+    function resetForm() {
+      document.getElementById('email').value = "";
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('resetBtn').disabled = false;
+      document.getElementById('resetBtn').textContent = 'Отправить письмо';
+      document.getElementById('reloadBtn').style.display = 'none';
+    }
+    
+    function initApp() {
+      if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+        showError('❌ Ошибка конфигурации. Переменные Supabase не загружены.');
+        return;
       }
+      
+      showSuccess('✅ Конфигурация загружена!');
+      document.getElementById('resetForm').style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      
+      import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm')
+        .then(({ createClient }) => {
+          const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+          
+          document.getElementById('reloadBtn').addEventListener('click', resetForm);
+          
+          document.getElementById('resetBtn').addEventListener('click', async () => {
+            const email = document.getElementById('email').value.trim();
+            
+            if (!email) {
+              showError('Введите email');
+              return;
+            }
 
-      // простая проверка формата email
-      const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
-      if (!emailPattern.test(email)) {
-        msg.textContent = "Неверный формат email!"
-        msg.className = "msg error"
-        reloadBtn.style.display = "block"
-        return
-      }
+            const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+            if (!emailPattern.test(email)) {
+              showError('Неверный формат email');
+              document.getElementById('reloadBtn').style.display = 'block';
+              return;
+            }
 
-      btn.disabled = true
-      msg.textContent = "Отправляем письмо..."
-      msg.className = "msg"
+            try {
+              document.getElementById('resetBtn').disabled = true;
+              document.getElementById('resetBtn').textContent = 'Отправляем...';
+              
+              const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/update-password.html'
+              });
 
-      try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + "/update-password.html"
+              if (error) throw error;
+
+              showSuccess('📧 Письмо отправлено! Проверьте вашу почту для сброса пароля.');
+              document.getElementById('reloadBtn').style.display = 'block';
+
+              setTimeout(() => {
+                document.getElementById('resetBtn').disabled = false;
+                document.getElementById('resetBtn').textContent = 'Отправить письмо';
+              }, 30000);
+            } catch (error) {
+              showError('Ошибка отправки: ' + error.message);
+              document.getElementById('resetBtn').disabled = false;
+              document.getElementById('resetBtn').textContent = 'Отправить письмо';
+              document.getElementById('reloadBtn').style.display = 'block';
+            }
+          });
         })
-
-        if (error) {
-          msg.textContent = "Ошибка: " + error.message
-          msg.className = "msg error"
-          reloadBtn.style.display = "block"
-        } else {
-          msg.textContent = "📧 Письмо отправлено! Проверь почту."
-          msg.className = "msg success"
-
-          // разблокировка через 30 секунд
-          setTimeout(() => {
-            btn.disabled = false
-            msg.textContent = ""
-          }, 30000)
-        }
-      } catch (e) {
-        msg.textContent = "Что-то пошло не так."
-        msg.className = "msg error"
-        reloadBtn.style.display = "block"
-        btn.disabled = false
+        .catch(error => {
+          showError('❌ Ошибка загрузки Supabase: ' + error.message);
+        });
+    }
+    
+    const configTimeout = setTimeout(() => {
+      if (!window.SUPABASE_URL) {
+        showError('❌ Таймаут загрузки конфигурации. Используем резервные значения...');
+        window.SUPABASE_URL = 'https://dtjhlanmwjpdcdxgzzyo.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY';
+        initApp();
       }
-    })
+    }, 5000);
+    
+    window.addEventListener('configLoaded', () => {
+      clearTimeout(configTimeout);
+      initApp();
+    });
+    
+    if (window.SUPABASE_URL) {
+      clearTimeout(configTimeout);
+      initApp();
+    }
   </script>
 </body>
 </html>

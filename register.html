@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Регистрация</title>
+  <title>Регистрация — Edu Keys</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     body {
@@ -12,6 +12,8 @@
       height:100vh;
       background:linear-gradient(135deg,#4dd0e1,#f48fb1);
       font-family:'Comic Sans MS', cursive, sans-serif;
+      margin: 0;
+      padding: 20px;
     }
     .register-card {
       background:#fff;
@@ -28,6 +30,7 @@
       margin:8px 0;
       border:1px solid #ccc;
       border-radius:10px;
+      box-sizing: border-box;
     }
     .btn {
       background:#42a5f5;
@@ -37,43 +40,157 @@
       border-radius:10px;
       cursor:pointer;
       margin-top:10px;
+      width:100%;
     }
     .btn:hover { background:#1e88e5; }
+    .btn:disabled { 
+      background:#b0bec5; 
+      cursor:not-allowed; 
+    }
+    .link { margin-top:12px;font-size:14px; }
+    .link a { color:#42a5f5;text-decoration:none; }
+    .link a:hover { text-decoration:underline; }
+    .error { 
+      background: #ffebee; 
+      color: #c62828; 
+      padding: 10px; 
+      border-radius: 5px; 
+      margin: 10px 0; 
+      display: none; 
+    }
+    .success { 
+      background: #e8f5e8; 
+      color: #2e7d32; 
+      padding: 10px; 
+      border-radius: 5px; 
+      margin: 10px 0; 
+      display: none; 
+    }
+    .loading { 
+      display: none;
+      margin: 10px 0;
+    }
   </style>
+  
+  <script src="/load-config.js"></script>
 </head>
 <body>
   <div class="register-card">
-    <h2>Регистрация</h2>
-    <input type="text" id="fullname" placeholder="ФИО">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Пароль">
-    <button class="btn" id="registerBtn">Зарегистрироваться</button>
-    <p>Уже есть аккаунт? <a href="/login.html">Вход</a></p>
+    <h2>Регистрация в Edu Keys</h2>
+    
+    <div id="loading" class="loading">
+      <p>🔄 Загружаем конфигурацию...</p>
+    </div>
+    
+    <div id="errorMessage" class="error"></div>
+    <div id="successMessage" class="success"></div>
+    
+    <div id="registerForm" style="display: none;">
+      <input type="text" id="fullname" placeholder="ФИО">
+      <input type="email" id="email" placeholder="Email">
+      <input type="password" id="password" placeholder="Пароль">
+      <button class="btn" id="registerBtn">Зарегистрироваться</button>
+      <p class="link">Уже есть аккаунт? <a href="/login.html">Вход</a></p>
+    </div>
   </div>
 
-  <script src="/config.js"></script>
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-
-    document.getElementById('registerBtn').addEventListener('click', async () => {
-      const fullname = document.getElementById('fullname').value
-      const email = document.getElementById('email').value
-      const password = document.getElementById('password').value
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullname } }
-      })
-
-      if (error) {
-        alert('Ошибка: ' + error.message)
-        return
+    document.getElementById('loading').style.display = 'block';
+    
+    function showError(message) {
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('errorMessage').style.display = 'block';
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+    }
+    
+    function showSuccess(message) {
+      document.getElementById('successMessage').textContent = message;
+      document.getElementById('successMessage').style.display = 'block';
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+    }
+    
+    function initApp() {
+      if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+        showError('❌ Ошибка конфигурации. Переменные Supabase не загружены.');
+        return;
       }
-      alert('Проверь почту и подтверди email для входа!')
-      window.location.href = "/login.html"
-    })
+      
+      showSuccess('✅ Конфигурация загружена!');
+      document.getElementById('registerForm').style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      
+      import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm')
+        .then(({ createClient }) => {
+          const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+          
+          document.getElementById('registerBtn').addEventListener('click', async () => {
+            const fullname = document.getElementById('fullname').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!fullname || !email || !password) {
+              showError('Заполните все поля');
+              return;
+            }
+
+            if (password.length < 6) {
+              showError('Пароль должен быть не менее 6 символов');
+              return;
+            }
+
+            try {
+              document.getElementById('registerBtn').disabled = true;
+              document.getElementById('registerBtn').textContent = 'Регистрируем...';
+              
+              const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: { 
+                  data: { full_name: fullname },
+                  emailRedirectTo: window.location.origin + '/login.html'
+                }
+              });
+
+              if (error) throw error;
+
+              showSuccess('✅ Регистрация успешна! Проверьте email для подтверждения.');
+              document.getElementById('registerBtn').style.display = 'none';
+              
+              setTimeout(() => {
+                window.location.href = '/login.html';
+              }, 3000);
+            } catch (error) {
+              showError('Ошибка регистрации: ' + error.message);
+              document.getElementById('registerBtn').disabled = false;
+              document.getElementById('registerBtn').textContent = 'Зарегистрироваться';
+            }
+          });
+        })
+        .catch(error => {
+          showError('❌ Ошибка загрузки Supabase: ' + error.message);
+        });
+    }
+    
+    const configTimeout = setTimeout(() => {
+      if (!window.SUPABASE_URL) {
+        showError('❌ Таймаут загрузки конфигурации. Используем резервные значения...');
+        window.SUPABASE_URL = 'https://dtjhlanmwjpdcdxgzzyo.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY';
+        initApp();
+      }
+    }, 5000);
+    
+    window.addEventListener('configLoaded', () => {
+      clearTimeout(configTimeout);
+      initApp();
+    });
+    
+    if (window.SUPABASE_URL) {
+      clearTimeout(configTimeout);
+      initApp();
+    }
   </script>
 </body>
 </html>
