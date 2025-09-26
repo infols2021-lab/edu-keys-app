@@ -2,32 +2,80 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Задание</title>
+  <title>Задание — Edu Keys</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .task-content { margin-bottom: 20px; }
+    .question { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .question:last-child { border-bottom: none; }
+    .question-image-container { text-align: center; margin: 15px 0; }
+    .question-image { max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .options { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .option { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; transition: background-color 0.2s; cursor: pointer; }
+    .option:hover { background-color: rgba(0,0,0,0.03); }
+    .option input[type="radio"] { margin: 0; cursor: pointer; }
+    .fill-input { padding: 8px 12px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 16px; width: 200px; }
+    .fill-input:focus { border-color: var(--accent2); outline: none; }
+    .attempt-warning { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #856404; }
+    .timer { background: var(--accent2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-left: 10px; }
+    .timer.warning { background: var(--accent); animation: pulse 1s infinite; }
+    .timer.danger { background: #e74c3c; animation: pulse 0.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    .disabled { opacity: 0.6; pointer-events: none; }
+    .loading { text-align: center; padding: 40px; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent2); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .completed-message { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
+    .time-info { background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 14px; }
+  </style>
 </head>
-<body class="centered">
-  <div class="card" style="width:760px; max-width:95vw;">
-    <h2 id="taskTitle">Задание</h2>
-    <div id="taskMeta" style="font-size:14px;color:#666;margin-bottom:8px;"></div>
-    <div id="taskContent" style="text-align:left; margin:12px 0;"></div>
-    <div style="display:flex; gap:12px; justify-content:space-between; align-items:center;">
-      <div>
-        <button id="submitBtn" class="btn">Сдать</button>
-        <button id="tryAgainBtn" class="btn secondary" style="display:none">Попробовать снова</button>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <div class="mark">EK</div>
+        <div>
+          <h3 id="pageTitle">Задание</h3>
+          <div class="small-muted" id="subTitle"></div>
+        </div>
       </div>
-      <div>
-        <button onclick="window.location.href='/tasks.html'" class="btn secondary">Назад к заданиям</button>
+      <div class="nav">
+        <button class="btn" onclick="location.href='/tasks.html'">К заданиям</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="attemptWarning" class="attempt-warning" style="display: none;"></div>
+      <div id="timeInfo" class="time-info" style="display: none;"></div>
+      
+      <div id="loading" class="loading" style="display: none;">
+        <div class="spinner"></div>
+        <p>Начинаем выполнение задания...</p>
+      </div>
+      
+      <div id="completedMessage" class="completed-message" style="display: none;">
+        <h3>Задание завершено</h3>
+        <p id="completedText"></p>
+        <button class="btn" onclick="location.href='/tasks.html'">Вернуться к заданиям</button>
+      </div>
+      
+      <div id="taskBody" class="task-content"></div>
+      
+      <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center;">
+        <button id="submitBtn" class="btn" style="display: none;">Отправить ответ</button>
+        <div id="timer" class="timer" style="display: none;">00:00</div>
+        <button class="btn secondary" onclick="location.href='/tasks.html'">Назад к заданиям</button>
       </div>
     </div>
   </div>
 
-  <!-- Результат / ошибки -->
-  <div id="resultModal" class="modal">
-    <div class="modal-content">
-      <h3 id="resultTitle"></h3>
-      <p id="resultText"></p>
-      <div style="margin-top:10px;">
-        <button id="closeModal" class="btn">OK</button>
+  <div class="modal-backdrop" id="modal" style="display: none;">
+    <div class="modal-body card">
+      <h3 id="modalTitle"></h3>
+      <p id="modalText" style="white-space: pre-line;"></p>
+      <div style="margin-top: 12px; text-align: center;">
+        <button class="btn" id="modalOk">ОК</button>
       </div>
     </div>
   </div>
@@ -39,171 +87,350 @@
 
     const params = new URLSearchParams(window.location.search)
     const taskId = params.get('id')
-    let task = null, user = null
+    let task = null
+    let user = null
+    let currentAttemptId = null
+    let attemptStarted = false
+    let startTime = null
+    let timerInterval = null
+    let timeLimit = 60
 
     const submitBtn = document.getElementById('submitBtn')
-    const tryAgainBtn = document.getElementById('tryAgainBtn')
+    const taskBody = document.getElementById('taskBody')
+    const attemptWarning = document.getElementById('attemptWarning')
+    const timeInfo = document.getElementById('timeInfo')
+    const timerElement = document.getElementById('timer')
+    const loadingElement = document.getElementById('loading')
+    const completedMessage = document.getElementById('completedMessage')
+    const completedText = document.getElementById('completedText')
 
-    async function loadTask() {
+    function showModal(title, text) {
+      document.getElementById('modalTitle').textContent = title
+      document.getElementById('modalText').textContent = text
+      document.getElementById('modal').style.display = 'flex'
+    }
+
+    document.getElementById('modalOk').addEventListener('click', () => {
+      document.getElementById('modal').style.display = 'none'
+      if (document.getElementById('modalTitle').textContent.includes('🎉')) {
+        window.location.href = '/tasks.html'
+      }
+    })
+
+    function startCountdown() {
+      if (!startTime) return
+      
+      function updateTimer() {
+        const now = new Date()
+        const elapsed = Math.floor((now - startTime) / 1000)
+        const remaining = timeLimit * 60 - elapsed
+        
+        if (remaining <= 0) {
+          // Время вышло
+          clearInterval(timerInterval)
+          timerElement.textContent = "00:00"
+          timerElement.className = "timer danger"
+          submitBtn.disabled = true
+          submitBtn.textContent = "Время вышло!"
+          attemptWarning.innerHTML = '<strong>⏰ Время вышло!</strong> Задание автоматически отправлено.'
+          autoSubmit()
+        } else {
+          const minutes = Math.floor(remaining / 60)
+          const seconds = remaining % 60
+          timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+          
+          // Изменяем цвет таймера при малом остатке времени
+          if (remaining < 300) { // 5 минут
+            timerElement.className = "timer danger"
+          } else if (remaining < 600) { // 10 минут
+            timerElement.className = "timer warning"
+          }
+        }
+      }
+      
+      timerInterval = setInterval(updateTimer, 1000)
+      updateTimer()
+    }
+
+    async function autoSubmit() {
+      if (!task || !attemptStarted) return
+
+      let answers = {}
+      
+      if (task.type === 'mcq') {
+        const questions = task.content?.questions || []
+        
+        for (let i = 0; i < questions.length; i++) {
+          const selected = document.querySelector(`input[name="q${i}"]:checked`)
+          // ВАЖНОЕ ИСПРАВЛЕНИЕ: отправляем -1 для неотвеченных вопросов вместо 0
+          answers[i] = selected ? parseInt(selected.value) : -1
+        }
+      }
+
       try {
-        const { data: userData } = await supabase.auth.getUser()
-        user = userData?.user
-        if (!user) return redirectToLogin()
+        const { data, error } = await supabase.rpc('finish_attempt', {
+          _user_id: user.id,
+          _task_id: taskId,
+          _attempt_id: currentAttemptId,
+          _answers: answers
+        })
 
-        if (!taskId) {
-          showModal('Ошибка', 'Не указан ID задания.')
+        if (error) {
+          console.error('Auto-submit error:', error)
           return
         }
 
-        const { data, error } = await supabase
-          .from('tasks')
-          .select('id,title,type,content,passing_score,month_index,month_name')
-          .eq('id', taskId)
-          .single()
+        const result = Array.isArray(data) ? data[0] : data
+        
+        if (result.error) {
+          console.error('Auto-submit result error:', result.error)
+        } else {
+          taskBody.style.display = 'none'
+          submitBtn.style.display = 'none'
+          completedMessage.style.display = 'block'
+          completedText.textContent = result.message || '⏰ Время вышло! Задание автоматически отправлено.'
+        }
+      } catch (e) {
+        console.error('Auto-submission error:', e)
+      }
+    }
+
+    async function startAttempt() {
+      loadingElement.style.display = 'block'
+      taskBody.style.display = 'none'
+      submitBtn.style.display = 'none'
+
+      try {
+        const { data, error } = await supabase.rpc('start_attempt', {
+          _user_id: user.id,
+          _task_id: taskId
+        })
 
         if (error) throw error
-        task = data
-        // безопасность: content иногда приходит как строка
-        if (task && typeof task.content === 'string') {
-          try { task.content = JSON.parse(task.content) } catch(e){ console.warn('Не удалось распарсить content', e) }
+
+        if (data.error) {
+          showModal('Ошибка', data.error)
+          return false
         }
 
-        document.getElementById('taskTitle').textContent = task.title
-        document.getElementById('taskMeta').textContent = `${task.month_name || ('Месяц ' + task.month_index)} — Проходной: ${task.passing_score}%`
-
-        renderTask(task)
-      } catch (err) {
-        console.error(err)
-        showModal('Ошибка загрузки', err.message || String(err))
+        currentAttemptId = data.attempt_id
+        attemptStarted = true
+        startTime = new Date()
+        
+        // Показываем информацию о времени
+        timeInfo.style.display = 'block'
+        timeInfo.innerHTML = `<strong>⏱️ Лимит времени:</strong> ${timeLimit} минут. Таймер запущен!`
+        
+        // Показываем интерфейс задания
+        loadingElement.style.display = 'none'
+        taskBody.style.display = 'block'
+        submitBtn.style.display = 'inline-block'
+        attemptWarning.style.display = 'block'
+        attemptWarning.innerHTML = '<strong>⚠️ Внимание!</strong> Вы начали выполнение задания. Попытка списана. Следите за временем!'
+        timerElement.style.display = 'inline-block'
+        
+        startCountdown()
+        renderTask()
+        return true
+      } catch (error) {
+        console.error('Ошибка начала попытки:', error)
+        if (error.message.includes('Попытка уже использована')) {
+          await showCompletedAttempt()
+        } else {
+          showModal('Ошибка', 'Не удалось начать попытку. Попробуйте позже.')
+        }
+        return false
       }
     }
 
-    function redirectToLogin(){
-      window.location.href = '/login.html'
-    }
+    async function showCompletedAttempt() {
+      const { data: attempt } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('task_id', taskId)
+        .eq('user_id', user.id)
+        .single()
 
-    function renderTask(task) {
-      const container = document.getElementById('taskContent')
-      container.innerHTML = ''
-      if (task.type === 'mcq') {
-        const qlist = task.content?.questions || []
-        qlist.forEach((q, i) => {
-          const qEl = document.createElement('div')
-          qEl.style.padding = '8px'
-          qEl.style.borderBottom = '1px dashed #eee'
-          qEl.innerHTML = `<p style="margin:6px 0"><b>${i+1}. ${escapeHtml(q.q)}</b> <span style="color:#666">(${q.points ?? 1} балл)</span></p>`
-          const opts = q.options || []
-          opts.forEach((opt, j) => {
-            const id = `q${i}_opt${j}`
-            qEl.innerHTML += `<div style="margin:4px 0"><label><input type="radio" name="q${i}" id="${id}" value="${j}"> ${escapeHtml(opt)}</label></div>`
-          })
-          container.appendChild(qEl)
-        })
-      } else if (task.type === 'fill') {
-        const text = task.content?.text || '...'
-        const html = escapeHtml(text).replace('____', `<input id="fillAnswer" style="padding:6px;border-radius:8px;border:1px solid #ddd;width:220px">`)
-        container.innerHTML = `<div style="padding:8px">${html}</div>`
-      } else if (task.type === 'crossword') {
-        const img = task.content?.image || ''
-        const html = `
-          <div style="padding:8px">
-            <img src="${escapeAttr(img)}" alt="Кроссворд" style="width:100%;max-width:640px;border-radius:12px;border:3px solid #ffd3a5"/>
-            <p style="margin-top:8px">Введи слово-ключ:</p>
-            <input id="crossAnswer" style="padding:6px;border-radius:8px;border:1px solid #ddd;width:220px">
-          </div>`
-        container.innerHTML = html
-      } else {
-        container.innerHTML = `<div style="padding:8px"><i>Неподдерживаемый тип задания: ${escapeHtml(task.type)}</i></div>`
+      if (attempt) {
+        loadingElement.style.display = 'none'
+        taskBody.style.display = 'none'
+        submitBtn.style.display = 'none'
+        completedMessage.style.display = 'block'
+        
+        if (attempt.score === -1) {
+          completedText.textContent = 'Вы начали это задание, но не завершили его. Попытка считается использованной. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg'
+        } else if (attempt.score >= task.passing_score) {
+          completedText.textContent = `✅ Вы успешно выполнили это задание! Ваш результат: ${attempt.score}%`
+        } else {
+          completedText.textContent = `❌ Вы уже выполняли это задание. Результат: ${attempt.score}%. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg`
+        }
       }
     }
 
-    submitBtn.addEventListener('click', async () => {
-      if (!task || !user) {
-        showModal('Ошибка', 'Задание не загружено или вы не вошли в систему.')
+    async function loadTask() {
+      const { data: { user: userData } } = await supabase.auth.getUser()
+      user = userData
+      if (!user) {
+        location.href = '/login.html'
         return
       }
-      submitBtn.disabled = true
+
+      const { data: taskData } = await supabase.from('tasks').select('*').eq('id', taskId).single()
+      if (!taskData) {
+        showModal('Ошибка', 'Задание не найдено')
+        return
+      }
+      
+      task = taskData
+      timeLimit = task.time_limit || 60
+      
+      const { data: key } = await supabase
+        .from('keys')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('month_index', task.month_index)
+        .single()
+      
+      if (key) {
+        showCompletedAttempt()
+        completedText.textContent = '🎉 Вы уже получили ключ за этот месяц!'
+        return
+      }
+
+      document.getElementById('pageTitle').textContent = task.title
+      document.getElementById('subTitle').textContent = `Проходной балл: ${task.passing_score || 80}% • Лимит времени: ${timeLimit} мин`
+
+      const { data: attempt } = await supabase
+        .from('attempts')
+        .select('*')
+        .eq('task_id', taskId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (attempt) {
+        await showCompletedAttempt()
+      } else {
+        await startAttempt()
+      }
+    }
+
+    function renderTask() {
+      taskBody.innerHTML = ''
+      
+      if (task.type === 'mcq') {
+        const questions = task.content?.questions || []
+        
+        questions.forEach((q, i) => {
+          const questionEl = document.createElement('div')
+          questionEl.className = 'question'
+          
+          let questionHTML = `<p><b>${i + 1}. ${escapeHtml(q.q)}</b></p>`
+          
+          if (q.image) {
+            questionHTML += `
+              <div class="question-image-container">
+                <img src="${q.image}" alt="Изображение для вопроса" 
+                     class="question-image" 
+                     onerror="this.style.display='none'">
+              </div>
+            `
+          }
+          
+          questionHTML += `<div class="options">
+            ${q.options.map((opt, j) => `
+              <label class="option">
+                <input type="radio" name="q${i}" value="${j}">
+                <span>${escapeHtml(opt)}</span>
+              </label>
+            `).join('')}
+          </div>`
+          
+          questionEl.innerHTML = questionHTML
+          taskBody.appendChild(questionEl)
+        })
+      }
+
+      submitBtn.onclick = submitAnswers
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div')
+      div.textContent = text
+      return div.innerHTML
+    }
+
+    async function submitAnswers() {
+      if (!task || !attemptStarted) return
+
+      let answers = {}
+      
+      if (task.type === 'mcq') {
+        const questions = task.content?.questions || []
+        
+        for (let i = 0; i < questions.length; i++) {
+          const selected = document.querySelector(`input[name="q${i}"]:checked`)
+          answers[i] = selected ? parseInt(selected.value) : null
+          
+          if (answers[i] === null) {
+            showModal('Ошибка', 'Пожалуйста, ответьте на все вопросы перед отправкой.')
+            return
+          }
+        }
+      }
+
       try {
-        // собираем ответы
-        const answers = {}
-        if (task.type === 'mcq') {
-          const qs = task.content?.questions || []
-          qs.forEach((q, i) => {
-            const sel = document.querySelector(`input[name="q${i}"]:checked`)
-            if (sel) answers[i] = sel.value
-            else answers[i] = null
-          })
-        } else if (task.type === 'fill') {
-          const v = document.getElementById('fillAnswer')?.value ?? ''
-          answers[0] = v
-        } else if (task.type === 'crossword') {
-          const v = document.getElementById('crossAnswer')?.value ?? ''
-          answers[0] = v
+        submitBtn.disabled = true
+        submitBtn.textContent = 'Проверяем ответы...'
+        
+        const { data, error } = await supabase.rpc('finish_attempt', {
+          _user_id: user.id,
+          _task_id: taskId,
+          _attempt_id: currentAttemptId,
+          _answers: answers
+        })
+
+        if (error) {
+          console.error('RPC Error:', error)
+          showModal('Ошибка', 'Не удалось отправить ответ. Попробуйте позже.')
+          submitBtn.disabled = false
+          submitBtn.textContent = 'Отправить ответ'
+          return
         }
 
-        // Вызов RPC. supabase-js корректно сериализует JS-объект в jsonb.
-        const { data, error } = await supabase
-          .rpc('check_task_and_issue_key', {
-            _user_id: user.id,
-            _task_id: task.id,
-            _answers: answers
-          })
+        clearInterval(timerInterval)
 
-        if (error) throw error
-
-        // data — JSON результат функции
-        // иногда supabase возвращает данные внутри data (в старой версии -> data[0])
-        const result = (Array.isArray(data) && data.length>0) ? data[0] : data
-
-        showResultModal(result)
-      } catch (err) {
-        console.error('submit error', err)
-        showModal('Ошибка при отправке', err.message || String(err))
-      } finally {
+        const result = Array.isArray(data) ? data[0] : data
+        
+        if (result.error) {
+          showModal('Ошибка', result.error)
+        } else if (result.passed) {
+          taskBody.style.display = 'none'
+          submitBtn.style.display = 'none'
+          completedMessage.style.display = 'block'
+          completedText.textContent = result.message
+        } else {
+          taskBody.style.display = 'none'
+          submitBtn.style.display = 'none'
+          completedMessage.style.display = 'block'
+          completedText.textContent = result.message
+        }
+      } catch (e) {
+        console.error('Submission error:', e)
+        showModal('Ошибка', 'Неизвестная ошибка. Попробуйте позже.')
         submitBtn.disabled = false
-      }
-    })
-
-    function showResultModal(resultObj) {
-      if (!resultObj) return showModal('Ошибка', 'Нет ответа от сервера')
-      const passed = resultObj.passed === true || resultObj.passed === 't'
-      const score = resultObj.score ?? resultObj.data?.score
-      if (passed) {
-        showModal('Поздравляем 🎉', `Вы набрали ${score}% и получили ключ!`)
-      } else {
-        showModal('Попробуйте снова', `Результат: ${score}% (нужно ${resultObj.need}%)`, true)
+        submitBtn.textContent = 'Отправить ответ'
       }
     }
 
-    function showModal(title, text, allowRetry=false) {
-      document.getElementById('resultTitle').textContent = title
-      document.getElementById('resultText').textContent = text
-      document.getElementById('resultModal').classList.add('active')
-      if (allowRetry) {
-        tryAgainBtn.style.display = 'inline-block'
-      } else {
-        tryAgainBtn.style.display = 'none'
+    // Защита от потери данных при перезагрузке
+    window.addEventListener('beforeunload', (event) => {
+      if (attemptStarted && submitBtn.style.display !== 'none' && !submitBtn.disabled) {
+        event.preventDefault()
+        event.returnValue = 'У вас есть незавершенная попытка. Вы уверены, что хотите уйти?'
       }
-    }
-
-    document.getElementById('closeModal').addEventListener('click', () => {
-      document.getElementById('resultModal').classList.remove('active')
-      // после закрытия возвращаемся к списку заданий
-      window.location.href = '/tasks.html'
-    })
-    tryAgainBtn.addEventListener('click', () => {
-      document.getElementById('resultModal').classList.remove('active')
-      tryAgainBtn.style.display = 'none'
     })
 
-    // utils
-    function escapeHtml(s) {
-      if (s == null) return ''
-      return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]))
-    }
-    function escapeAttr(s){ return escapeHtml(s) }
-
-    loadTask()
+    document.addEventListener('DOMContentLoaded', loadTask)
   </script>
 </body>
 </html>

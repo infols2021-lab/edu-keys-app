@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Создать / Редактировать задание</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="centered">
+<div class="card">
+  <h2 id="formTitle">Создать задание</h2>
+
+  <label>Название:</label>
+  <input type="text" id="title" style="width:100%;padding:8px;margin:5px 0;">
+
+  <label>Месяц:</label>
+  <select id="month" style="width:100%;padding:8px;margin:5px 0;">
+    <option value="1">Сентябрь</option>
+    <option value="2">Октябрь</option>
+    <option value="3">Ноябрь</option>
+    <option value="4">Декабрь</option>
+    <option value="5">Январь</option>
+    <option value="6">Февраль</option>
+    <option value="7">Март</option>
+  </select>
+
+  <label>Тип:</label>
+  <select id="type" style="width:100%;padding:8px;margin:5px 0;">
+    <option value="mcq">Тест (MCQ)</option>
+    <option value="fill">Пропуски (fill-in)</option>
+  </select>
+
+  <div id="questionsContainer"></div>
+  <button class="btn" id="addQuestionBtn">➕ Добавить вопрос</button>
+  <br>
+  <button class="btn" id="saveBtn">💾 Сохранить</button>
+  <button class="btn secondary" onclick="window.location.href='/admin.html'">Назад</button>
+</div>
+
+<script src="/config.js"></script>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+  const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+
+  const params = new URLSearchParams(window.location.search)
+  const taskId = params.get('id')
+  const container = document.getElementById('questionsContainer')
+  const typeSelect = document.getElementById('type')
+  let questions=[]
+
+  function renderQuestions(){
+    container.innerHTML=''
+    questions.forEach((q,i)=>{
+      const div=document.createElement('div')
+      div.innerHTML=`<p><b>Вопрос ${i+1}:</b></p>
+        <input type="text" placeholder="Вопрос" value="${q.q||''}" class="qInput" style="width:100%;padding:5px;margin:3px 0;">
+        ${typeSelect.value==='mcq'?`
+          <input type="text" placeholder="Варианты через ;" value="${q.options? q.options.join(';') : ''}" style="width:100%;padding:5px;margin:3px 0;">
+          <input type="number" placeholder="Правильный индекс (0,1,2...)" value="${q.correct||0}" style="width:100%;padding:5px;margin:3px 0;">` : ''}
+        <button class="btn small secondary" onclick="removeQuestion(${i})">Удалить</button>
+        <hr>`
+      container.appendChild(div)
+    })
+  }
+
+  function removeQuestion(i){ questions.splice(i,1); renderQuestions() }
+  document.getElementById('addQuestionBtn').addEventListener('click',()=>{ questions.push({}); renderQuestions() })
+  typeSelect.addEventListener('change',()=>{ renderQuestions() })
+
+  async function loadTask(){
+    if(!taskId) return
+    const { data,error } = await supabase.from('tasks').select('*').eq('id',taskId).single()
+    if(error) return
+    document.getElementById('formTitle').textContent='Редактировать задание'
+    document.getElementById('title').value=data.title
+    document.getElementById('month').value=data.month_index
+    document.getElementById('type').value=data.type
+    questions=data.content.questions||[]
+    renderQuestions()
+  }
+
+  async function saveTask(){
+    const title=document.getElementById('title').value
+    const month=document.getElementById('month').value
+    const type=document.getElementById('type').value
+
+    const content=type==='mcq'?questions.map((q,i)=>({
+      q: container.querySelectorAll('.qInput')[i].value,
+      options: container.querySelectorAll('input[type="text"]')[i+1].value.split(';'),
+      correct: parseInt(container.querySelectorAll('input[type="number"]')[i].value)
+    })): { text: container.querySelector('.qInput').value }
+
+    if(taskId){
+      await supabase.from('tasks').update({title,month_index:month,type,content}).eq('id',taskId)
+    } else {
+      await supabase.from('tasks').insert({title,month_index:month,type,content})
+    }
+    window.location.href='/admin.html'
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', saveTask)
+  loadTask()
+</script>
+</body>
+</html>

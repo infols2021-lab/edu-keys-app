@@ -3,66 +3,202 @@
 <head>
   <meta charset="utf-8">
   <title>Задания</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    .task-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:12px; width:100%; }
-    .task-card { padding:12px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.06); text-align:left }
-    .task-card button { margin-top:8px }
+    .attempt-info {
+      background: #e7f3ff;
+      border: 1px solid #b3d9ff;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .warning-note {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .start-warning {
+      background: #ffeaa7;
+      border: 2px solid #fdcb6e;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 5px;
+      font-size: 13px;
+    }
+    .month-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
   </style>
 </head>
-<body class="centered">
-  <div class="card" style="width:900px; max-width:95vw;">
-    <h2>Задания</h2>
-    <div id="tasksContainer" class="task-grid"></div>
-    <div style="margin-top:12px"><button onclick="window.location.href='/profile.html'" class="btn secondary">Назад в профиль</button></div>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo"><div class="mark">EK</div><div><h3>Задания</h3><div class="small-muted">Выбирай и проходи</div></div></div>
+      <div class="nav">
+        <button class="btn" onclick="location.href='/profile.html'">Профиль</button>
+        <button class="btn secondary" id="logoutBtn">Выйти</button>
+      </div>
+    </div>
+
+    <div class="attempt-info">
+      <strong>💡 Важная информация:</strong> Попытка списывается автоматически при переходе к заданию. 
+      Будьте внимательны! Если возникли проблемы, напишите администратору в Telegram: @skebobingg
+    </div>
+
+    <div class="card">
+      <div id="monthsRoot"></div>
+    </div>
   </div>
 
   <script src="/config.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
     const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
-
     const months = ["Сентябрь","Октябрь","Ноябрь","Декабрь","Январь","Февраль","Март"]
 
-    function getCurrentStudyIndex(){
-      const now = new Date()
-      const m = now.getMonth()+1 //1..12
-      const map = {9:1,10:2,11:3,12:4,1:5,2:6,3:7}
-      return map[m] || 1
+    // Получаем текущий учебный месяц (1-7)
+    function getStudyIndex() {
+      const now = new Date();
+      const month = now.getMonth() + 1; // 1-12
+      
+      // Учебный год с сентября по август
+      if (month >= 9) {
+        return month - 8; // Сентябрь=1, Октябрь=2, ..., Декабрь=4
+      } else {
+        return month + 4; // Январь=5, ..., Август=12 (но у нас только до марта=7)
+      }
     }
 
-    async function loadTasks(){
+    async function load() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { window.location.href = '/login.html'; return }
+      if (!user) { 
+        location.href = '/login.html'; 
+        return; 
+      }
 
       const { data: tasks } = await supabase.from('tasks').select('*').order('month_index')
-      const { data: keys } = await supabase.from('keys').select('*').eq('user_id', user.id)
       const { data: attempts } = await supabase.from('attempts').select('*').eq('user_id', user.id)
+      const { data: keys } = await supabase.from('keys').select('*').eq('user_id', user.id)
 
-      const container = document.getElementById('tasksContainer')
-      container.innerHTML = ''
-      const maxAvail = getCurrentStudyIndex()
+      const root = document.getElementById('monthsRoot')
+      root.innerHTML = ''
 
-      tasks.forEach(t=>{
-        const div = document.createElement('div'); div.className='task-card'
-        div.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><b>${t.title}</b><div class="small">${t.month_name || months[t.month_index-1]}</div></div>
-          <div style="text-align:right"><div class="small">pass ${t.passing_score}%</div></div></div>`
-        const hasKey = keys?.some(k=>k.month_index===t.month_index)
-        const passedAttempt = attempts?.some(a=>a.task_id===t.id && a.passed)
-        const btn = document.createElement('button'); btn.className='btn'
-        if (hasKey || passedAttempt) {
-          btn.textContent = 'Выполнено ✅'; btn.disabled = true; btn.classList.add('secondary')
-        } else if (t.month_index <= maxAvail) {
-          btn.textContent = 'Начать'; btn.addEventListener('click', ()=> window.location.href=`/task.html?id=${t.id}`)
+      const currentMonthIndex = getStudyIndex()
+
+      for (let mi = 1; mi <= 7; mi++) {
+        const monthTasks = (tasks || []).filter(t => t.month_index === mi)
+        if (monthTasks.length === 0) continue;
+
+        // ИСПРАВЛЕНИЕ: Правильно определяем статус месяца
+        const hasKeyForMonth = (keys || []).some(k => k.month_index === mi)
+        const hasAnyAttemptForMonth = (attempts || []).some(a => {
+          const task = monthTasks.find(t => t.id === a.task_id)
+          return task !== undefined
+        })
+        
+        let monthStatus = ''
+        let monthStatusIcon = ''
+        
+        if (hasKeyForMonth) {
+          monthStatus = '🗝️ Получен ключ'
+          monthStatusIcon = '🗝️'
+        } else if (hasAnyAttemptForMonth) {
+          monthStatus = '❌ Попытка использована'
+          monthStatusIcon = '❌'
+        } else if (mi <= currentMonthIndex) {
+          monthStatus = '✅ Доступно'
+          monthStatusIcon = '✅'
         } else {
-          btn.textContent = 'Недоступно ⏳'; btn.disabled = true; btn.classList.add('secondary')
+          monthStatus = '🔒 Заблокировано'
+          monthStatusIcon = '🔒'
         }
-        div.appendChild(btn)
-        container.appendChild(div)
-      })
+
+        const box = document.createElement('div')
+        box.className = 'month-row'
+        const title = document.createElement('div')
+        title.className = 'month-title'
+        
+        title.innerHTML = `
+          <div><b>${months[mi-1]}</b></div>
+          <div class="month-status">
+            <span class="small-muted">${monthStatus}</span>
+          </div>
+        `
+        box.appendChild(title)
+
+        const grid = document.createElement('div')
+        grid.className = 'tasks-grid'
+        
+        monthTasks.forEach(t => {
+          const card = document.createElement('div')
+          card.className = 'task-card'
+          
+          // Проверяем, выполнял ли пользователь это задание
+          const attempt = (attempts || []).find(a => a.task_id === t.id)
+          const isCompleted = attempt && attempt.score >= t.passing_score
+          const hasAttempt = attempt !== undefined
+          const hasKeyForMonth = (keys || []).some(k => k.month_index === t.month_index)
+          
+          card.innerHTML = `
+            <h4>${t.title}</h4>
+            <p>Тип: 📝 Тест • Проходной балл: ${t.passing_score}% • Лимит времени: ${t.time_limit || 60} мин</p>
+          `
+          
+          const meta = document.createElement('div')
+          meta.className = 'meta'
+          
+          const btn = document.createElement('button')
+          btn.className = 'btn small'
+          
+          if (hasKeyForMonth) {
+            // Если ключ за месяц уже получен
+            btn.textContent = '🗝️ Ключ получен'
+            btn.disabled = true
+            btn.classList.add('ghost')
+          } else if (hasAttempt) {
+            // Если была попытка (любая) - доступ закрыт
+            btn.textContent = '❌ Попытка использована'
+            btn.disabled = true
+            btn.classList.add('ghost')
+            card.innerHTML += `<div class="warning-note">Для сброса попытки напишите админу в Telegram: @skebobingg</div>`
+          } else if (mi <= currentMonthIndex) {
+            // Если месяц доступен и не было попыток
+            btn.textContent = '🚀 Начать задание'
+            btn.onclick = () => {
+              if (confirm('⚠️ ВНИМАНИЕ!\n\nПри переходе к заданию попытка будет списана автоматически.\n\nВы уверены, что готовы начать?')) {
+                location.href = `/task.html?id=${t.id}`
+              }
+            }
+            card.innerHTML += `<div class="start-warning">⚠️ Попытка спишется при переходе</div>`
+          } else {
+            // Если месяц еще не доступен
+            btn.textContent = '🔒 Недоступно'
+            btn.disabled = true
+            btn.classList.add('ghost')
+          }
+          
+          meta.appendChild(btn)
+          card.appendChild(meta)
+          grid.appendChild(card)
+        })
+        
+        box.appendChild(grid)
+        root.appendChild(box)
+      }
     }
 
-    loadTasks()
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await supabase.auth.signOut()
+      location.href = '/login.html'
+    })
+
+    document.addEventListener('DOMContentLoaded', load)
   </script>
 </body>
 </html>

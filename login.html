@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход — Edu Keys</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      background:linear-gradient(135deg,#fdd835,#f48fb1);
+      font-family:'Comic Sans MS', cursive, sans-serif;
+    }
+    .login-card {
+      background:#fff;
+      padding:30px;
+      border-radius:20px;
+      box-shadow:0 4px 15px rgba(0,0,0,0.2);
+      width:90%;
+      max-width:350px;
+      text-align:center;
+    }
+    .login-card input {
+      width:100%;
+      padding:10px;
+      margin:8px 0;
+      border:1px solid #ccc;
+      border-radius:10px;
+    }
+    .btn {
+      background:#ff7043;
+      color:#fff;
+      border:none;
+      padding:10px 20px;
+      border-radius:10px;
+      cursor:pointer;
+      margin-top:10px;
+      width:100%;
+    }
+    .btn:hover { background:#f4511e; }
+    .btn.admin {
+      background:#42a5f5;
+      margin-top:5px;
+    }
+    .btn.admin:hover { background:#1e88e5; }
+    .link { margin-top:12px;font-size:14px; }
+    .link a { color:#42a5f5;text-decoration:none; }
+    .link a:hover { text-decoration:underline; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h2>Вход в Edu Keys</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Пароль">
+    <button class="btn" id="loginBtn">Войти как ученик</button>
+    <button class="btn admin" id="adminLoginBtn">Войти как администратор</button>
+
+    <p class="link">Нет аккаунта? <a href="/register.html">Регистрация</a></p>
+    <p class="link"><a href="/reset.html">Забыли пароль?</a></p>
+  </div>
+
+  <script src="/config.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+
+    async function login(isAdmin) {
+      const email = document.getElementById('email').value
+      const password = document.getElementById('password').value
+
+      if (!email || !password) {
+        alert('Введите email и пароль')
+        return
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { 
+        alert('Ошибка: ' + error.message); 
+        return 
+      }
+
+      if (isAdmin) {
+        // Проверяем, является ли пользователь администратором
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', data.user.id)
+          .single()
+          
+        if (profile && profile.is_admin) {
+          window.location.href = "/admin.html"
+        } else {
+          alert('У вас нет прав администратора')
+          await supabase.auth.signOut()
+        }
+      } else {
+        window.location.href = "/profile.html"
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', () => login(false))
+    document.getElementById('adminLoginBtn').addEventListener('click', () => login(true))
+  </script>
+</body>
+</html>
