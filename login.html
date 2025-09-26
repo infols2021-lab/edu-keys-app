@@ -59,12 +59,34 @@
       margin: 10px 0; 
       display: none; 
     }
+    .success { 
+      background: #e8f5e8; 
+      color: #2e7d32; 
+      padding: 10px; 
+      border-radius: 5px; 
+      margin: 10px 0; 
+      display: none; 
+    }
   </style>
+  
+  <!-- ВСТРАИВАЕМ КОНФИГУРАЦИЮ ПРЯМО В HTML -->
+  <script>
+    // Конфигурация Supabase - встроена напрямую
+    window.SUPABASE_URL = 'https://dtjhlanmwjpdcdxgzzyo.supabase.co';
+    window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY';
+    
+    console.log('🔧 Supabase Config:', {
+      url: window.SUPABASE_URL,
+      key: window.SUPABASE_ANON_KEY ? '✅ Loaded' : '❌ Missing'
+    });
+  </script>
 </head>
 <body>
   <div class="login-card">
     <h2>Вход в Edu Keys</h2>
     <div id="errorMessage" class="error"></div>
+    <div id="successMessage" class="success"></div>
+    
     <input type="email" id="email" placeholder="Email" value="admin@example.com">
     <input type="password" id="password" placeholder="Пароль" value="admin123">
     <button class="btn" id="loginBtn">Войти как ученик</button>
@@ -74,34 +96,48 @@
     <p class="link"><a href="/reset.html">Забыли пароль?</a></p>
   </div>
 
-  <script src="/config.js"></script>
   <script type="module">
+    // Проверяем наличие конфигурации
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+      showError('❌ Ошибка конфигурации Supabase. Переменные не загружены.');
+      console.error('Missing Supabase configuration:', {
+        SUPABASE_URL: window.SUPABASE_URL,
+        SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY ? 'Present' : 'Missing'
+      });
+      return;
+    }
+
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
     
-    // Проверяем доступность Supabase
-    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-      document.getElementById('errorMessage').textContent = 'Ошибка конфигурации. Проверьте config.js';
-      document.getElementById('errorMessage').style.display = 'block';
-    }
-    
+    console.log('🔄 Инициализация Supabase...');
     const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+    console.log('✅ Supabase инициализирован');
 
     // Проверяем, возможно пользователь уже авторизован
     async function checkAuth() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Проверяем, является ли админом
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single()
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) throw error;
+        
+        if (user) {
+          console.log('👤 Пользователь уже авторизован:', user.email);
+          // Проверяем, является ли админом
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', user.id)
+            .single()
           
-        if (profile && profile.is_admin) {
-          window.location.href = '/admin.html'
-        } else {
-          window.location.href = '/profile.html'
+          if (profileError) throw profileError;
+          
+          if (profile && profile.is_admin) {
+            window.location.href = '/admin.html'
+          } else {
+            window.location.href = '/profile.html'
+          }
         }
+      } catch (error) {
+        console.error('Ошибка проверки авторизации:', error);
       }
     }
 
@@ -115,44 +151,72 @@
       }
 
       try {
+        showMessage('🔐 Входим в систему...', 'success');
+        
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) { 
-          showError('Ошибка: ' + error.message); 
-          return 
+          throw error;
         }
 
+        console.log('✅ Успешный вход:', data.user.email);
+
         if (isAdmin) {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('id', data.user.id)
             .single()
             
+          if (profileError) throw profileError;
+          
           if (profile && profile.is_admin) {
-            window.location.href = "/admin.html"
+            showMessage('✅ Вход успешен! Перенаправляем...', 'success');
+            setTimeout(() => window.location.href = "/admin.html", 1000);
           } else {
-            showError('У вас нет прав администратора')
-            await supabase.auth.signOut()
+            showError('У вас нет прав администратора');
+            await supabase.auth.signOut();
           }
         } else {
-          window.location.href = "/profile.html"
+          showMessage('✅ Вход успешен! Перенаправляем...', 'success');
+          setTimeout(() => window.location.href = "/profile.html", 1000);
         }
       } catch (error) {
-        showError('Ошибка соединения: ' + error.message)
+        console.error('Ошибка входа:', error);
+        showError('Ошибка входа: ' + error.message);
       }
     }
 
     function showError(message) {
       const errorDiv = document.getElementById('errorMessage')
+      const successDiv = document.getElementById('successMessage')
       errorDiv.textContent = message
       errorDiv.style.display = 'block'
+      successDiv.style.display = 'none'
+    }
+
+    function showMessage(message, type) {
+      const errorDiv = document.getElementById('errorMessage')
+      const successDiv = document.getElementById('successMessage')
+      
+      if (type === 'success') {
+        successDiv.textContent = message
+        successDiv.style.display = 'block'
+        errorDiv.style.display = 'none'
+      } else {
+        errorDiv.textContent = message
+        errorDiv.style.display = 'block'
+        successDiv.style.display = 'none'
+      }
     }
 
     document.getElementById('loginBtn').addEventListener('click', () => login(false))
     document.getElementById('adminLoginBtn').addEventListener('click', () => login(true))
 
     // Проверяем авторизацию при загрузке
-    checkAuth()
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Страница входа загружена');
+      checkAuth();
+    });
   </script>
 </body>
 </html>
