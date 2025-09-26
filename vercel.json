@@ -6,18 +6,18 @@
       "use": "@vercel/static"
     },
     {
-      "src": "css/*",
+      "src": "*.js",
       "use": "@vercel/static"
     },
     {
-      "src": "config.js",
+      "src": "css/*.css",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/login.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
