@@ -12,6 +12,8 @@
       height:100vh;
       background:linear-gradient(135deg,#fdd835,#f48fb1);
       font-family:'Comic Sans MS', cursive, sans-serif;
+      margin: 0;
+      padding: 20px;
     }
     .login-card {
       background:#fff;
@@ -28,6 +30,7 @@
       margin:8px 0;
       border:1px solid #ccc;
       border-radius:10px;
+      box-sizing: border-box;
     }
     .btn {
       background:#ff7043;
@@ -48,13 +51,22 @@
     .link { margin-top:12px;font-size:14px; }
     .link a { color:#42a5f5;text-decoration:none; }
     .link a:hover { text-decoration:underline; }
+    .error { 
+      background: #ffebee; 
+      color: #c62828; 
+      padding: 10px; 
+      border-radius: 5px; 
+      margin: 10px 0; 
+      display: none; 
+    }
   </style>
 </head>
 <body>
   <div class="login-card">
     <h2>Вход в Edu Keys</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Пароль">
+    <div id="errorMessage" class="error"></div>
+    <input type="email" id="email" placeholder="Email" value="admin@example.com">
+    <input type="password" id="password" placeholder="Пароль" value="admin123">
     <button class="btn" id="loginBtn">Войти как ученик</button>
     <button class="btn admin" id="adminLoginBtn">Войти как администратор</button>
 
@@ -65,44 +77,82 @@
   <script src="/config.js"></script>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+    
+    // Проверяем доступность Supabase
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+      document.getElementById('errorMessage').textContent = 'Ошибка конфигурации. Проверьте config.js';
+      document.getElementById('errorMessage').style.display = 'block';
+    }
+    
     const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+
+    // Проверяем, возможно пользователь уже авторизован
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Проверяем, является ли админом
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single()
+          
+        if (profile && profile.is_admin) {
+          window.location.href = '/admin.html'
+        } else {
+          window.location.href = '/profile.html'
+        }
+      }
+    }
 
     async function login(isAdmin) {
       const email = document.getElementById('email').value
       const password = document.getElementById('password').value
 
       if (!email || !password) {
-        alert('Введите email и пароль')
+        showError('Введите email и пароль')
         return
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) { 
-        alert('Ошибка: ' + error.message); 
-        return 
-      }
-
-      if (isAdmin) {
-        // Проверяем, является ли пользователь администратором
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', data.user.id)
-          .single()
-          
-        if (profile && profile.is_admin) {
-          window.location.href = "/admin.html"
-        } else {
-          alert('У вас нет прав администратора')
-          await supabase.auth.signOut()
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) { 
+          showError('Ошибка: ' + error.message); 
+          return 
         }
-      } else {
-        window.location.href = "/profile.html"
+
+        if (isAdmin) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', data.user.id)
+            .single()
+            
+          if (profile && profile.is_admin) {
+            window.location.href = "/admin.html"
+          } else {
+            showError('У вас нет прав администратора')
+            await supabase.auth.signOut()
+          }
+        } else {
+          window.location.href = "/profile.html"
+        }
+      } catch (error) {
+        showError('Ошибка соединения: ' + error.message)
       }
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage')
+      errorDiv.textContent = message
+      errorDiv.style.display = 'block'
     }
 
     document.getElementById('loginBtn').addEventListener('click', () => login(false))
     document.getElementById('adminLoginBtn').addEventListener('click', () => login(true))
+
+    // Проверяем авторизацию при загрузке
+    checkAuth()
   </script>
 </body>
 </html>
