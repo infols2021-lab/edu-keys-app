@@ -15,8 +15,9 @@
     .option { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; transition: background-color 0.2s; cursor: pointer; }
     .option:hover { background-color: rgba(0,0,0,0.03); }
     .option input[type="radio"] { margin: 0; cursor: pointer; }
-    .fill-input { padding: 8px 12px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 16px; width: 200px; }
+    .fill-input { padding: 8px 12px; border: 2px solid rgba(0,0,0,0.1); border-radius: 8px; font-size: 16px; width: 100%; max-width: 400px; margin-top: 10px; }
     .fill-input:focus { border-color: var(--accent2); outline: none; }
+    .fill-label { display: block; margin-top: 15px; font-weight: 600; }
     .attempt-warning { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #856404; }
     .timer { background: var(--accent2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-left: 10px; }
     .timer.warning { background: var(--accent); animation: pulse 1s infinite; }
@@ -41,6 +42,16 @@
       text-align: center; 
       padding: 40px; 
     }
+    .question-type-badge { 
+      display: inline-block; 
+      padding: 4px 8px; 
+      border-radius: 6px; 
+      font-size: 12px; 
+      font-weight: bold; 
+      margin-bottom: 8px; 
+    }
+    .mcq-badge { background: #e3f2fd; color: #1976d2; }
+    .fill-badge { background: #f3e5f5; color: #7b1fa2; }
   </style>
   
   <script src="/load-config.js"></script>
@@ -198,13 +209,17 @@
           if (!task || !attemptStarted) return;
 
           let answers = {};
+          const questions = task.content?.questions || [];
           
-          if (task.type === 'mcq') {
-            const questions = task.content?.questions || [];
+          for (let i = 0; i < questions.length; i++) {
+            const question = questions[i];
             
-            for (let i = 0; i < questions.length; i++) {
+            if (question.type === 'mcq') {
               const selected = document.querySelector(`input[name="q${i}"]:checked`);
               answers[i] = selected ? parseInt(selected.value) : -1;
+            } else if (question.type === 'fill') {
+              const answerInput = document.querySelector(`input[name="fill${i}"]`);
+              answers[i] = answerInput ? answerInput.value.trim() : '';
             }
           }
 
@@ -337,7 +352,17 @@
           }
 
           document.getElementById('pageTitle').textContent = task.title;
-          document.getElementById('subTitle').textContent = `Проходной балл: ${task.passing_score || 80}% • Лимит времени: ${timeLimit} мин`;
+          
+          const questionTypes = task.content?.questions?.map(q => q.type) || [];
+          const hasMcq = questionTypes.includes('mcq');
+          const hasFill = questionTypes.includes('fill');
+          
+          let typeText = '';
+          if (hasMcq && hasFill) typeText = '📝 Тест + ✍️ Письменный';
+          else if (hasMcq) typeText = '📝 Тест';
+          else if (hasFill) typeText = '✍️ Письменный';
+          
+          document.getElementById('subTitle').textContent = `${typeText} • Проходной балл: ${task.passing_score || 80}% • Лимит времени: ${timeLimit} мин`;
 
           const { data: attempt } = await supabase
             .from('attempts')
@@ -356,25 +381,31 @@
         function renderTask() {
           taskBody.innerHTML = '';
           
-          if (task.type === 'mcq') {
-            const questions = task.content?.questions || [];
+          const questions = task.content?.questions || [];
+          
+          questions.forEach((q, i) => {
+            const questionEl = document.createElement('div');
+            questionEl.className = 'question';
             
-            questions.forEach((q, i) => {
-              const questionEl = document.createElement('div');
-              questionEl.className = 'question';
-              
-              let questionHTML = `<p><b>${i + 1}. ${escapeHtml(q.q)}</b></p>`;
-              
-              if (q.image) {
-                questionHTML += `
-                  <div class="question-image-container">
-                    <img src="${q.image}" alt="Изображение для вопроса" 
-                         class="question-image" 
-                         onerror="this.style.display='none'">
-                  </div>
-                `;
-              }
-              
+            // Добавляем бейдж типа вопроса
+            const typeBadge = document.createElement('div');
+            typeBadge.className = `question-type-badge ${q.type === 'mcq' ? 'mcq-badge' : 'fill-badge'}`;
+            typeBadge.textContent = q.type === 'mcq' ? '📝 Тестовый вопрос' : '✍️ Вписать ответ';
+            questionEl.appendChild(typeBadge);
+            
+            let questionHTML = `<p><b>${i + 1}. ${escapeHtml(q.q)}</b></p>`;
+            
+            if (q.image) {
+              questionHTML += `
+                <div class="question-image-container">
+                  <img src="${q.image}" alt="Изображение для вопроса" 
+                       class="question-image" 
+                       onerror="this.style.display='none'">
+                </div>
+              `;
+            }
+            
+            if (q.type === 'mcq') {
               questionHTML += `<div class="options">
                 ${q.options.map((opt, j) => `
                   <label class="option">
@@ -383,13 +414,16 @@
                   </label>
                 `).join('')}
               </div>`;
-              
-              questionEl.innerHTML = questionHTML;
-              taskBody.appendChild(questionEl);
-            });
-          }
-
-          submitBtn.onclick = submitAnswers;
+            } else if (q.type === 'fill') {
+              questionHTML += `
+                <label class="fill-label">Ваш ответ:</label>
+                <input type="text" class="fill-input" name="fill${i}" placeholder="Введите ваш ответ здесь...">
+              `;
+            }
+            
+            questionEl.innerHTML += questionHTML;
+            taskBody.appendChild(questionEl);
+          });
         }
 
         function escapeHtml(text) {
@@ -402,19 +436,37 @@
           if (!task || !attemptStarted) return;
 
           let answers = {};
+          const questions = task.content?.questions || [];
+          let allAnswered = true;
+          let errorMessage = '';
           
-          if (task.type === 'mcq') {
-            const questions = task.content?.questions || [];
+          for (let i = 0; i < questions.length; i++) {
+            const question = questions[i];
             
-            for (let i = 0; i < questions.length; i++) {
+            if (question.type === 'mcq') {
               const selected = document.querySelector(`input[name="q${i}"]:checked`);
               answers[i] = selected ? parseInt(selected.value) : null;
               
               if (answers[i] === null) {
-                showModal('Ошибка', 'Пожалуйста, ответьте на все вопросы перед отправкой.');
-                return;
+                allAnswered = false;
+                errorMessage = 'Пожалуйста, ответьте на все тестовые вопросы';
+                break;
+              }
+            } else if (question.type === 'fill') {
+              const answerInput = document.querySelector(`input[name="fill${i}"]`);
+              answers[i] = answerInput ? answerInput.value.trim() : '';
+              
+              if (!answers[i]) {
+                allAnswered = false;
+                errorMessage = 'Пожалуйста, заполните все поля для ввода ответа';
+                break;
               }
             }
+          }
+          
+          if (!allAnswered) {
+            showModal('Ошибка', errorMessage);
+            return;
           }
 
           try {

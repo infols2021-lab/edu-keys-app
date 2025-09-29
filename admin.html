@@ -34,6 +34,15 @@
     .upload-progress { width:100%; height:4px; background:#f0f0f0; border-radius:2px; margin:10px 0; display:none; }
     .upload-progress-bar { height:100%; background:var(--accent2); border-radius:2px; width:0%; transition:width 0.3s; }
     .time-limit-info { background:#e7f3ff; border:1px solid #b3d9ff; border-radius:8px; padding:10px; margin-top:5px; font-size:14px; }
+    .question-type-selector { display:flex; gap:10px; margin-bottom:15px; }
+    .type-btn { padding:10px 15px; border:2px solid #ddd; border-radius:8px; cursor:pointer; background:white; transition:all 0.3s; }
+    .type-btn.active { border-color:var(--accent2); background:var(--accent2); color:white; }
+    .fill-answer { padding:8px 12px; border:2px solid rgba(0,0,0,0.1); border-radius:8px; font-size:16px; width:100%; margin-top:5px; }
+    .task-stats { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+    .task-type-indicator { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
+    .mcq-type { background: #e3f2fd; color: #1976d2; }
+    .fill-type { background: #f3e5f5; color: #7b1fa2; }
+    .mixed-type { background: #e8f5e8; color: #2e7d32; }
     .loading { 
       text-align: center; 
       padding: 40px; 
@@ -84,6 +93,22 @@
         <div>
           <button class="btn" onclick="location.href='/profile.html'">👤 Мой профиль</button>
           <button class="btn secondary" id="logoutBtn">🚪 Выйти</button>
+        </div>
+      </div>
+
+      <div class="task-stats">
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+          <div>
+            <strong>📊 Статистика:</strong>
+            <span id="totalTasks">Заданий: 0</span> | 
+            <span id="totalUsers">Пользователей: 0</span>
+          </div>
+          <div>
+            <strong>🎯 Типы вопросов:</strong>
+            <span class="task-type-indicator mcq-type">📝 Тест</span>
+            <span class="task-type-indicator fill-type">✍️ Письменный</span>
+            <span class="task-type-indicator mixed-type">📝+✍️ Смешанный</span>
+          </div>
         </div>
       </div>
 
@@ -162,19 +187,21 @@
           </div>
           
           <div class="form-group">
-            <label>Тип задания:</label>
-            <select id="taskType" class="input" disabled>
-              <option value="mcq">📝 Тест (выбор ответа)</option>
-            </select>
-            <div class="small-muted" style="margin-top:5px;">На данный момент доступны только тестовые задания</div>
-          </div>
-          
-          <div class="form-group">
             <label>Проходной балл (%):</label>
             <input type="number" id="taskPassingScore" class="input" value="80" min="0" max="100">
           </div>
           
-          <div id="taskContent"></div>
+          <div id="taskContent">
+            <h3>Вопросы задания</h3>
+            <div class="question-type-selector">
+              <div class="type-btn active" data-type="mcq">📝 Тестовый вопрос</div>
+              <div class="type-btn" data-type="fill">✍️ Вписать ответ</div>
+            </div>
+            <div id="questionsContainer">
+              <!-- Вопросы будут добавляться сюда динамически -->
+            </div>
+            <button class="btn btn-small" onclick="addQuestion()">➕ Добавить вопрос</button>
+          </div>
           
           <div style="margin-top:20px;">
             <button class="btn" onclick="saveTask()">💾 Сохранить задание</button>
@@ -232,6 +259,8 @@
         
         let currentUser = null;
         let editingTaskId = null;
+        let currentQuestionType = 'mcq';
+        let questionCounter = 0;
         
         // Проверяем права администратора
         async function checkAdmin() {
@@ -294,6 +323,28 @@
           }
         }
         
+        // Функция для загрузки статистики
+        async function loadStats() {
+          try {
+            // Считаем задания
+            const { data: tasks, error: tasksError } = await supabase
+              .from('tasks')
+              .select('id, content');
+            
+            // Считаем пользователей
+            const { data: users, error: usersError } = await supabase
+              .from('profiles')
+              .select('id');
+
+            if (!tasksError && !usersError) {
+              document.getElementById('totalTasks').textContent = `Заданий: ${tasks.length}`;
+              document.getElementById('totalUsers').textContent = `Пользователей: ${users.length}`;
+            }
+          } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+          }
+        }
+        
         // Инициализация админ-панели
         async function initAdmin() {
           const isAdmin = await checkAdmin();
@@ -302,6 +353,7 @@
           // Загрузка данных
           loadUsers();
           loadTasks();
+          loadStats();
           
           // Настройка вкладок
           document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -325,8 +377,17 @@
             }
           });
           
-          // Отображаем контент для тестовых заданий
-          renderTaskContent();
+          // Настройка выбора типа вопроса
+          document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+              document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+              this.classList.add('active');
+              currentQuestionType = this.getAttribute('data-type');
+            });
+          });
+          
+          // Добавляем первый вопрос при загрузке
+          addQuestion('mcq');
         }
         
         // Очистка поиска
@@ -464,7 +525,8 @@
             showModal('Ошибка', 'Ошибка при удаления пользователя: ' + error.message);
           }
         }
-                // ===== РАБОТА С ЗАДАНИЯМИ =====
+
+        // ===== РАБОТА С ЗАДАНИЯМИ =====
         async function loadTasks() {
           const { data, error } = await supabase
             .from('tasks')
@@ -490,11 +552,33 @@
           const months = ["Сентябрь", "Октябрь", "Ноябрь", "Декабрь", "Январь", "Февраль", "Март"];
           
           data.forEach(task => {
+            const questionTypes = task.content?.questions?.map(q => q.type) || [];
+            const hasMcq = questionTypes.includes('mcq');
+            const hasFill = questionTypes.includes('fill');
+            
+            let typeText = '';
+            let typeClass = '';
+            if (hasMcq && hasFill) {
+              typeText = '📝+✍️';
+              typeClass = 'mixed-type';
+            } else if (hasMcq) {
+              typeText = '📝';
+              typeClass = 'mcq-type';
+            } else if (hasFill) {
+              typeText = '✍️';
+              typeClass = 'fill-type';
+            } else {
+              typeText = '📝';
+              typeClass = 'mcq-type';
+            }
+            
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td>${task.title}</td>
               <td>${months[task.month_index - 1] || task.month_index}</td>
-              <td>📝 Тест</td>
+              <td>
+                <span class="task-type-indicator ${typeClass}">${typeText}</span>
+              </td>
               <td>${task.time_limit || 60} мин</td>
               <td>${task.passing_score}%</td>
               <td>
@@ -514,59 +598,24 @@
           document.getElementById('taskTimeLimit').value = '60';
           document.getElementById('taskPassingScore').value = '80';
           editingTaskId = null;
+          questionCounter = 0;
           
-          renderTaskContent();
+          // Очищаем вопросы
+          const questionsContainer = document.getElementById('questionsContainer');
+          questionsContainer.innerHTML = '';
+          
+          // Добавляем первый вопрос
+          addQuestion('mcq');
         }
         
         window.hideTaskForm = function() {
           document.getElementById('taskFormCard').style.display = 'none';
         }
         
-        function renderTaskContent() {
-          const contentDiv = document.getElementById('taskContent');
-          
-          // Только тестовые задания (mcq)
-          contentDiv.innerHTML = `
-            <h3>Вопросы теста</h3>
-            <div id="mcqQuestions">
-              <div class="subtask-item">
-                <div class="form-group">
-                  <label>Текст вопроса:</label>
-                  <input type="text" class="input mcq-question" placeholder="Введите вопрос">
-                </div>
-                <div class="form-group">
-                  <label>Изображение для вопроса (опционально):</label>
-                  <div class="upload-area" id="uploadArea1" onclick="document.getElementById('imageInput1').click()">
-                    <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
-                    <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                    <input type="file" id="imageInput1" style="display:none" accept="image/*" onchange="handleImageUpload(this, 1)">
-                  </div>
-                  <div class="upload-progress" id="progress1">
-                    <div class="upload-progress-bar" id="progressBar1"></div>
-                  </div>
-                  <input type="hidden" class="input mcq-image" id="imageUrl1">
-                  <img class="image-preview" id="imagePreview1" alt="Предпросмотр изображения">
-                  <button type="button" class="btn btn-small btn-danger" onclick="removeImage(1)" style="display:none; margin-top:5px;" id="removeBtn1">🗑️ Удалить изображение</button>
-                </div>
-                <div class="form-group">
-                  <label>Варианты ответов (каждый с новой строки):</label>
-                  <textarea class="input mcq-options" placeholder="Вариант 1\nВариант 2\nВариант 3" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                  <label>Правильный ответ (номер варианта, начиная с 1):</label>
-                  <input type="number" class="input mcq-correct" min="1" value="1">
-                </div>
-                <button class="btn btn-small btn-danger" onclick="removeMcqQuestion(this)">Удалить вопрос</button>
-              </div>
-            </div>
-            <button class="btn btn-small" onclick="addMcqQuestion()">➕ Добавить вопрос</button>
-          `;
-          
-          setupUploadArea(1);
-        }
-        
         function setupUploadArea(questionIndex) {
           const uploadArea = document.getElementById(`uploadArea${questionIndex}`);
+          if (!uploadArea) return;
+          
           const imageInput = document.getElementById(`imageInput${questionIndex}`);
           
           // Обработчики drag and drop
@@ -655,48 +704,78 @@
           imageInput.value = '';
         }
         
-        window.addMcqQuestion = function() {
-          const questionsDiv = document.getElementById('mcqQuestions');
-          const questionCount = questionsDiv.children.length + 1;
+        window.addQuestion = function(type = null) {
+          const questionsContainer = document.getElementById('questionsContainer');
+          const questionType = type || currentQuestionType;
+          questionCounter++;
           
           const newQuestion = document.createElement('div');
           newQuestion.className = 'subtask-item';
-          newQuestion.innerHTML = `
-            <div class="form-group">
-              <label>Текст вопроса:</label>
-              <input type="text" class="input mcq-question" placeholder="Введите вопрос">
-            </div>
-            <div class="form-group">
-              <label>Изображение для вопроса (опционально):</label>
-              <div class="upload-area" id="uploadArea${questionCount}" onclick="document.getElementById('imageInput${questionCount}').click()">
-                <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
-                <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                <input type="file" id="imageInput${questionCount}" style="display:none" accept="image/*" onchange="handleImageUpload(this, ${questionCount})">
-              </div>
-              <div class="upload-progress" id="progress${questionCount}">
-                <div class="upload-progress-bar" id="progressBar${questionCount}"></div>
-              </div>
-              <input type="hidden" class="input mcq-image" id="imageUrl${questionCount}">
-              <img class="image-preview" id="imagePreview${questionCount}" alt="Предпросмотр изображения">
-              <button type="button" class="btn btn-small btn-danger" onclick="removeImage(${questionCount})" style="display:none; margin-top:5px;" id="removeBtn${questionCount}">🗑️ Удалить изображение</button>
-            </div>
-            <div class="form-group">
-              <label>Варианты ответов (каждый с новой строки):</label>
-              <textarea class="input mcq-options" placeholder="Вариант 1\nВариант 2\nВариант 3" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-              <label>Правильный ответ (номер варианта, начиная с 1):</label>
-              <input type="number" class="input mcq-correct" min="1" value="1">
-            </div>
-            <button class="btn btn-small btn-danger" onclick="removeMcqQuestion(this)">Удалить вопрос</button>
-          `;
-          questionsDiv.appendChild(newQuestion);
+          newQuestion.setAttribute('data-type', questionType);
           
-          // Настройка drag and drop для новой области
-          setupUploadArea(questionCount);
+          if (questionType === 'mcq') {
+            newQuestion.innerHTML = `
+              <div class="form-group">
+                <label>Текст вопроса:</label>
+                <input type="text" class="input question-text" placeholder="Введите вопрос">
+              </div>
+              <div class="form-group">
+                <label>Изображение для вопроса (опционально):</label>
+                <div class="upload-area" id="uploadArea${questionCounter}" onclick="document.getElementById('imageInput${questionCounter}').click()">
+                  <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
+                  <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
+                  <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*" onchange="handleImageUpload(this, ${questionCounter})">
+                </div>
+                <div class="upload-progress" id="progress${questionCounter}">
+                  <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                </div>
+                <input type="hidden" class="input question-image" id="imageUrl${questionCounter}">
+                <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения">
+                <button type="button" class="btn btn-small btn-danger" onclick="removeImage(${questionCounter})" style="display:none; margin-top:5px;" id="removeBtn${questionCounter}">🗑️ Удалить изображение</button>
+              </div>
+              <div class="form-group">
+                <label>Варианты ответов (каждый с новой строки):</label>
+                <textarea class="input mcq-options" placeholder="Вариант 1\nВариант 2\nВариант 3" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Правильный ответ (номер варианта, начиная с 1):</label>
+                <input type="number" class="input mcq-correct" min="1" value="1">
+              </div>
+              <button class="btn btn-small btn-danger" onclick="removeQuestion(this)">Удалить вопрос</button>
+            `;
+          } else {
+            newQuestion.innerHTML = `
+              <div class="form-group">
+                <label>Текст вопроса:</label>
+                <input type="text" class="input question-text" placeholder="Введите вопрос">
+              </div>
+              <div class="form-group">
+                <label>Изображение для вопроса (опционально):</label>
+                <div class="upload-area" id="uploadArea${questionCounter}" onclick="document.getElementById('imageInput${questionCounter}').click()">
+                  <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
+                  <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
+                  <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*" onchange="handleImageUpload(this, ${questionCounter})">
+                </div>
+                <div class="upload-progress" id="progress${questionCounter}">
+                  <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                </div>
+                <input type="hidden" class="input question-image" id="imageUrl${questionCounter}">
+                <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения">
+                <button type="button" class="btn btn-small btn-danger" onclick="removeImage(${questionCounter})" style="display:none; margin-top:5px;" id="removeBtn${questionCounter}">🗑️ Удалить изображение</button>
+              </div>
+              <div class="form-group">
+                <label>Правильный ответ:</label>
+                <input type="text" class="input fill-answer" placeholder="Введите правильный ответ">
+              </div>
+              <button class="btn btn-small btn-danger" onclick="removeQuestion(this)">Удалить вопрос</button>
+            `;
+          }
+          
+          questionsContainer.appendChild(newQuestion);
+          setupUploadArea(questionCounter);
         }
         
-        window.removeMcqQuestion = function(button) {
+        window.removeQuestion = function(button) {
           if (document.querySelectorAll('.subtask-item').length > 1) {
             button.closest('.subtask-item').remove();
           } else {
@@ -723,37 +802,65 @@
           document.getElementById('taskTimeLimit').value = task.time_limit || 60;
           document.getElementById('taskPassingScore').value = task.passing_score;
           editingTaskId = taskId;
+          questionCounter = 0;
           
-          renderTaskContent();
+          // Очищаем вопросы
+          const questionsContainer = document.getElementById('questionsContainer');
+          questionsContainer.innerHTML = '';
           
-          // Заполняем данные для редактирования
-          setTimeout(() => {
-            const questions = task.content.questions || [];
-            const questionsDiv = document.getElementById('mcqQuestions');
-            questionsDiv.innerHTML = '';
+          // Заполняем вопросы из задания
+          const questions = task.content?.questions || [];
+          questions.forEach((q, i) => {
+            questionCounter++;
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'subtask-item';
+            questionDiv.setAttribute('data-type', q.type || 'mcq');
             
-            questions.forEach((q, i) => {
-              const questionIndex = i + 1;
-              const questionDiv = document.createElement('div');
-              questionDiv.className = 'subtask-item';
+            if (q.type === 'fill') {
               questionDiv.innerHTML = `
                 <div class="form-group">
                   <label>Текст вопроса:</label>
-                  <input type="text" class="input mcq-question" value="${q.q || ''}" placeholder="Введите вопрос">
+                  <input type="text" class="input question-text" value="${q.q || ''}" placeholder="Введите вопрос">
                 </div>
                 <div class="form-group">
                   <label>Изображение для вопроса (опционально):</label>
-                  <div class="upload-area" id="uploadArea${questionIndex}" onclick="document.getElementById('imageInput${questionIndex}').click()" style="${q.image ? 'display:none' : ''}">
+                  <div class="upload-area" id="uploadArea${questionCounter}" onclick="document.getElementById('imageInput${questionCounter}').click()" style="${q.image ? 'display:none' : ''}">
                     <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
                     <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                    <input type="file" id="imageInput${questionIndex}" style="display:none" accept="image/*" onchange="handleImageUpload(this, ${questionIndex})">
+                    <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*" onchange="handleImageUpload(this, ${questionCounter})">
                   </div>
-                  <div class="upload-progress" id="progress${questionIndex}">
-                    <div class="upload-progress-bar" id="progressBar${questionIndex}"></div>
+                  <div class="upload-progress" id="progress${questionCounter}">
+                    <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
                   </div>
-                  <input type="hidden" class="input mcq-image" id="imageUrl${questionIndex}" value="${q.image || ''}">
-                  <img class="image-preview" id="imagePreview${questionIndex}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
-                  <button type="button" class="btn btn-small btn-danger" onclick="removeImage(${questionIndex})" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;" id="removeBtn${questionIndex}">🗑️ Удалить изображение</button>
+                  <input type="hidden" class="input question-image" id="imageUrl${questionCounter}" value="${q.image || ''}">
+                  <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
+                  <button type="button" class="btn btn-small btn-danger" onclick="removeImage(${questionCounter})" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;" id="removeBtn${questionCounter}">🗑️ Удалить изображение</button>
+                </div>
+                <div class="form-group">
+                  <label>Правильный ответ:</label>
+                  <input type="text" class="input fill-answer" value="${q.answer || ''}" placeholder="Введите правильный ответ">
+                </div>
+                <button class="btn btn-small btn-danger" onclick="removeQuestion(this)">Удалить вопрос</button>
+              `;
+            } else {
+              questionDiv.innerHTML = `
+                <div class="form-group">
+                  <label>Текст вопроса:</label>
+                  <input type="text" class="input question-text" value="${q.q || ''}" placeholder="Введите вопрос">
+                </div>
+                <div class="form-group">
+                  <label>Изображение для вопроса (опционально):</label>
+                  <div class="upload-area" id="uploadArea${questionCounter}" onclick="document.getElementById('imageInput${questionCounter}').click()" style="${q.image ? 'display:none' : ''}">
+                    <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
+                    <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
+                    <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*" onchange="handleImageUpload(this, ${questionCounter})">
+                  </div>
+                  <div class="upload-progress" id="progress${questionCounter}">
+                    <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                  </div>
+                  <input type="hidden" class="input question-image" id="imageUrl${questionCounter}" value="${q.image || ''}">
+                  <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
+                  <button type="button" class="btn btn-small btn-danger" onclick="removeImage(${questionCounter})" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;" id="removeBtn${questionCounter}">🗑️ Удалить изображение</button>
                 </div>
                 <div class="form-group">
                   <label>Варианты ответов (каждый с новой строки):</label>
@@ -763,14 +870,13 @@
                   <label>Правильный ответ (номер варианта, начиная с 1):</label>
                   <input type="number" class="input mcq-correct" min="1" value="${(q.correct || 0) + 1}">
                 </div>
-                <button class="btn btn-small btn-danger" onclick="removeMcqQuestion(this)">Удалить вопрос</button>
+                <button class="btn btn-small btn-danger" onclick="removeQuestion(this)">Удалить вопрос</button>
               `;
-              questionsDiv.appendChild(questionDiv);
-              
-              // Настройка drag and drop
-              setupUploadArea(questionIndex);
-            });
-          }, 100);
+            }
+            
+            questionsContainer.appendChild(questionDiv);
+            setupUploadArea(questionCounter);
+          });
         }
         
         window.saveTask = async function() {
@@ -794,29 +900,48 @@
           
           for (let i = 0; i < questionElements.length; i++) {
             const item = questionElements[i];
-            const question = item.querySelector('.mcq-question').value;
-            const imageUrl = document.getElementById(`imageUrl${i + 1}`).value;
-            const optionsText = item.querySelector('.mcq-options').value;
-            const correct = parseInt(item.querySelector('.mcq-correct').value) - 1;
+            const questionType = item.getAttribute('data-type') || 'mcq';
+            const question = item.querySelector('.question-text').value;
+            const imageUrl = document.getElementById(`imageUrl${i + 1}`)?.value || '';
             
             if (!question) {
               alert('Заполните текст вопроса');
               return;
             }
             
-            const options = optionsText.split('\n').filter(opt => opt.trim() !== '');
-            
-            if (correct < 0 || correct >= options.length) {
-              alert('Номер правильного ответа должен соответствовать одному из вариантов');
-              return;
+            if (questionType === 'mcq') {
+              const optionsText = item.querySelector('.mcq-options').value;
+              const correct = parseInt(item.querySelector('.mcq-correct').value) - 1;
+              
+              const options = optionsText.split('\n').filter(opt => opt.trim() !== '');
+              
+              if (correct < 0 || correct >= options.length) {
+                alert('Номер правильного ответа должен соответствовать одному из вариантов');
+                return;
+              }
+              
+              questions.push({
+                type: 'mcq',
+                q: question,
+                image: imageUrl || null,
+                options: options,
+                correct: correct
+              });
+            } else {
+              const answer = item.querySelector('.fill-answer').value;
+              
+              if (!answer) {
+                alert('Введите правильный ответ для вопроса с вводом текста');
+                return;
+              }
+              
+              questions.push({
+                type: 'fill',
+                q: question,
+                image: imageUrl || null,
+                answer: answer
+              });
             }
-            
-            questions.push({
-              q: question,
-              image: imageUrl || null,
-              options: options,
-              correct: correct
-            });
           }
           
           const content = { questions };
@@ -831,7 +956,6 @@
                   title, 
                   month_index: monthIndex, 
                   time_limit: timeLimit, 
-                  type: 'mcq', 
                   passing_score: passingScore, 
                   content 
                 })
@@ -852,7 +976,6 @@
                   title, 
                   month_index: monthIndex, 
                   time_limit: timeLimit, 
-                  type: 'mcq', 
                   passing_score: passingScore, 
                   content 
                 }]);
