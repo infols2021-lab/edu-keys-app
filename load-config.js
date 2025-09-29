@@ -1,87 +1,132 @@
-// load-config.js - универсальный загрузчик конфигурации
-(async function() {
-    console.log('🔄 Loading configuration...');
+// load-config.js - мгновенная загрузка с полной логикой
+(function() {
+    console.log('🚀 Загружаем конфигурацию (полная версия)...');
     
-    const configSources = [
-        // Источник 1: Прямые значения (высший приоритет)
-        async () => {
-            if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-                return { source: 'inline', config: { SUPABASE_URL: window.SUPABASE_URL, SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY } };
-            }
-            return null;
-        },
-        
-        // Источник 2: API endpoint (для Vercel)
-        async () => {
-            try {
-                const response = await fetch('/api/config');
-                if (response.ok) {
-                    const jsCode = await response.text();
-                    eval(jsCode); // Безопасно, так как мы контролируем API
-                    return { source: 'api', config: { SUPABASE_URL: window.SUPABASE_URL, SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY } };
-                }
-            } catch (error) {
-                console.log('API config not available:', error.message);
-            }
-            return null;
-        },
-        
-        // Источник 3: Статический config.js
-        async () => {
-            try {
-                // Пытаемся загрузить стандартный config.js
-                if (typeof window.loadConfig === 'undefined') {
-                    await new Promise((resolve, reject) => {
-                        const script = document.createElement('script');
-                        script.src = '/config.js';
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
-                }
-                if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-                    return { source: 'static', config: { SUPABASE_URL: window.SUPABASE_URL, SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY } };
-                }
-            } catch (error) {
-                console.log('Static config not available:', error.message);
-            }
-            return null;
-        },
-        
-        // Источник 4: Резервные значения
-        async () => {
-            const fallbackConfig = {
-                SUPABASE_URL: 'https://dtjhlanmwjpdcdxgzzyo.supabase.co',
-                SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY'
-            };
-            
-            window.SUPABASE_URL = fallbackConfig.SUPABASE_URL;
-            window.SUPABASE_ANON_KEY = fallbackConfig.SUPABASE_ANON_KEY;
-            
-            return { source: 'fallback', config: fallbackConfig };
-        }
-    ];
-    
-    // Пробуем все источники по порядку
-    for (const source of configSources) {
-        try {
-            const result = await source();
-            if (result) {
-                console.log(`✅ Configuration loaded from: ${result.source}`);
-                console.log('🔧 Supabase URL:', result.config.SUPABASE_URL ? '✅' : '❌');
-                
-                // Создаем событие, что конфигурация загружена
-                window.dispatchEvent(new CustomEvent('configLoaded', { 
-                    detail: result 
-                }));
-                
-                return;
-            }
-        } catch (error) {
-            console.log(`Config source failed:`, error.message);
-            continue;
-        }
+    const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 часа
+    const now = Date.now();
+
+    // Функция для сохранения в кэш
+    function saveToCache(config) {
+        localStorage.setItem('edu-keys-config', JSON.stringify(config));
+        localStorage.setItem('edu-keys-config-time', now.toString());
+        console.log('✅ Конфигурация сохранена в кэш');
     }
+
+    // Функция для установки конфигурации и отправки события
+    function setConfig(config, source) {
+        window.SUPABASE_URL = config.SUPABASE_URL;
+        window.SUPABASE_ANON_KEY = config.SUPABASE_ANON_KEY;
+        console.log(`✅ Конфигурация загружена из: ${source}`);
+        window.dispatchEvent(new CustomEvent('configLoaded', { 
+            detail: { source, config }
+        }));
+    }
+
+    // Источник 1: Кэш localStorage (самый быстрый)
+    const cachedConfig = localStorage.getItem('edu-keys-config');
+    const cacheTime = localStorage.getItem('edu-keys-config-time');
     
-    console.error('❌ All configuration sources failed!');
+    if (cachedConfig && cacheTime && (now - parseInt(cacheTime)) < CACHE_DURATION) {
+        const config = JSON.parse(cachedConfig);
+        setConfig(config, 'cache');
+        // Продолжаем проверять другие источники в фоне
+    } else {
+        // Источник 2: Резервные значения (мгновенно)
+        const fallbackConfig = {
+            SUPABASE_URL: 'https://dtjhlanmwjpdcdxgzzyo.supabase.co',
+            SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY'
+        };
+        setConfig(fallbackConfig, 'fallback');
+        saveToCache(fallbackConfig);
+    }
+
+    // Параллельно проверяем другие источники (в фоне)
+    
+    // Источник 3: Глобальные переменные (если есть)
+    if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY && 
+        !localStorage.getItem('config-checked-globals')) {
+        const globalConfig = {
+            SUPABASE_URL: window.SUPABASE_URL,
+            SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY
+        };
+        setConfig(globalConfig, 'globals');
+        saveToCache(globalConfig);
+        localStorage.setItem('config-checked-globals', 'true');
+    }
+
+    // Источник 4: API endpoint
+    fetch('/api/config')
+        .then(response => {
+            if (!response.ok) throw new Error('API not available');
+            return response.text();
+        })
+        .then(jsCode => {
+            // Безопасное выполнение кода API
+            try {
+                const originalURL = window.SUPABASE_URL;
+                const originalKEY = window.SUPABASE_ANON_KEY;
+                
+                eval(jsCode);
+                
+                // Проверяем, изменились ли значения
+                if (window.SUPABASE_URL !== originalURL || window.SUPABASE_ANON_KEY !== originalKEY) {
+                    const apiConfig = {
+                        SUPABASE_URL: window.SUPABASE_URL,
+                        SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY
+                    };
+                    setConfig(apiConfig, 'api');
+                    saveToCache(apiConfig);
+                    console.log('✅ Конфигурация обновлена из API');
+                }
+            } catch (error) {
+                console.log('API config evaluation failed:', error.message);
+            }
+        })
+        .catch(error => {
+            console.log('API config not available:', error.message);
+        });
+
+    // Источник 5: Статический config.js
+    if (!window.configStaticLoaded) {
+        const script = document.createElement('script');
+        script.src = '/config.js?' + Date.now(); // Добавляем timestamp для избежания кэша
+        script.onload = function() {
+            if (window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+                const staticConfig = {
+                    SUPABASE_URL: window.SUPABASE_URL,
+                    SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY
+                };
+                setConfig(staticConfig, 'static');
+                saveToCache(staticConfig);
+                console.log('✅ Конфигурация загружена из static config');
+            }
+            window.configStaticLoaded = true;
+        };
+        script.onerror = function() {
+            console.log('Static config not available');
+            window.configStaticLoaded = true;
+        };
+        document.head.appendChild(script);
+    }
+
+    // Функция для проверки конфигурации (как в оригинале)
+    window.checkConfig = function() {
+        const configValid = window.SUPABASE_URL && window.SUPABASE_ANON_KEY;
+        console.log('🔧 Configuration check:', {
+            SUPABASE_URL: window.SUPABASE_URL ? '✅' : '❌',
+            SUPABASE_ANON_KEY: window.SUPABASE_ANON_KEY ? '✅' : '❌',
+            valid: configValid
+        });
+        return configValid;
+    };
+
+    // Автопроверка при загрузке
+    setTimeout(() => {
+        if (!window.checkConfig()) {
+            console.error('❌ Critical: Supabase configuration is missing!');
+        } else {
+            console.log('✅ Configuration loaded successfully!');
+        }
+    }, 100);
+
 })();
