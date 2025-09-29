@@ -243,6 +243,8 @@
 
             if (error) {
               console.error('Auto-submit error:', error);
+              // ИСПРАВЛЕНИЕ: Показываем ошибку пользователю
+              attemptWarning.innerHTML = '<strong>⏰ Время вышло, но не удалось отправить ответ автоматически. Сообщите администратору.</strong>';
               return;
             }
 
@@ -250,6 +252,7 @@
             
             if (result.error) {
               console.error('Auto-submit result error:', result.error);
+              attemptWarning.innerHTML = '<strong>⏰ Время вышло, но произошла ошибка при отправке. Сообщите администратору.</strong>';
             } else {
               taskBody.style.display = 'none';
               submitBtn.style.display = 'none';
@@ -258,6 +261,7 @@
             }
           } catch (e) {
             console.error('Auto-submission error:', e);
+            attemptWarning.innerHTML = '<strong>⏰ Время вышло, но произошла ошибка при отправке. Сообщите администратору.</strong>';
           }
         }
 
@@ -543,7 +547,8 @@
 
             if (error) {
               console.error('RPC Error:', error);
-              showModal('Ошибка', 'Не удалось отправить ответ. Попробуйте позже.');
+              // ИСПРАВЛЕНИЕ: Показываем детальную ошибку
+              showModal('Ошибка отправки', 'Не удалось отправить ответ: ' + error.message);
               submitBtn.disabled = false;
               submitBtn.textContent = 'Отправить ответ';
               return;
