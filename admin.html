@@ -457,7 +457,6 @@
                     ${user.is_admin ? '❌ Убрать админку' : '👑 Сделать админом'}
                   </button>
                   <button class="btn btn-small btn-warning" onclick="resetProgress('${user.id}', '${user.email}')">🔄 Сбросить прогресс</button>
-                  <button class="btn btn-small btn-danger" onclick="deleteUser('${user.id}', '${user.email}')">🗑️ Удалить</button>
                 </div>
               </td>
             `;
@@ -503,26 +502,6 @@
           } catch (error) {
             console.error('Ошибка при сбросе прогресса:', error);
             showModal('Ошибка', 'Ошибка при сбросе прогресса: ' + error.message);
-          }
-        }
-        
-        window.deleteUser = async (userId, userEmail) => {
-          if (!confirm(`🚨 ВЫ УВЕРЕНЫ, что хотите УДАЛИТЬ пользователя ${userEmail}?\n\nЭто действие:\n• Удалит пользователя из системы\n• Удалит ВСЕ его данные (ключи, попытки, профиль)\n• НЕЛЬЗЯ отменить!`)) return;
-          
-          try {
-            await supabase.rpc('reset_user_progress', { _user_id: userId });
-            
-            const { error } = await supabase.auth.admin.deleteUser(userId);
-              
-            if (error) {
-              showModal('Ошибка', 'Ошибка при удалении пользователя: ' + error.message);
-            } else {
-              showModal('Успех', '✅ Пользователь полностью удален из системы!');
-              loadUsers();
-            }
-          } catch (error) {
-            console.error('Ошибка при удалении пользователя:', error);
-            showModal('Ошибка', 'Ошибка при удаления пользователя: ' + error.message);
           }
         }
 
@@ -946,6 +925,13 @@
           
           const content = { questions };
           
+          // Определяем тип задания для БД
+          const hasMcq = questions.some(q => q.type === 'mcq');
+          const hasFill = questions.some(q => q.type === 'fill');
+          let taskType = 'mcq';
+          if (hasMcq && hasFill) taskType = 'mixed';
+          else if (hasFill) taskType = 'fill';
+          
           // Сохраняем задание
           try {
             if (editingTaskId) {
@@ -956,6 +942,7 @@
                   title, 
                   month_index: monthIndex, 
                   time_limit: timeLimit, 
+                  type: taskType, // ДОБАВЛЕНО: тип задания для БД
                   passing_score: passingScore, 
                   content 
                 })
@@ -976,6 +963,7 @@
                   title, 
                   month_index: monthIndex, 
                   time_limit: timeLimit, 
+                  type: taskType, // ДОБАВЛЕНО: тип задания для БД
                   passing_score: passingScore, 
                   content 
                 }]);
@@ -990,7 +978,7 @@
             }
           } catch (error) {
             console.error('Ошибка при сохранении задания:', error);
-            alert('Ошибка при сохранении задания');
+            alert('Ошибка при сохранении задания: ' + error.message);
           }
         }
         
