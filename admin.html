@@ -925,12 +925,13 @@
           
           const content = { questions };
           
-          // Определяем тип задания для БД
+          // ИСПРАВЛЕНИЕ: Определяем тип задания для БД - используем только 'mcq' и 'mixed'
           const hasMcq = questions.some(q => q.type === 'mcq');
           const hasFill = questions.some(q => q.type === 'fill');
           let taskType = 'mcq';
-          if (hasMcq && hasFill) taskType = 'mixed';
-          else if (hasFill) taskType = 'fill';
+          if (hasFill) {
+            taskType = 'mixed'; // Если есть хотя бы один fill вопрос, используем mixed
+          }
           
           // Сохраняем задание
           try {
@@ -942,7 +943,7 @@
                   title, 
                   month_index: monthIndex, 
                   time_limit: timeLimit, 
-                  type: taskType, // ДОБАВЛЕНО: тип задания для БД
+                  type: taskType,
                   passing_score: passingScore, 
                   content 
                 })
@@ -963,7 +964,7 @@
                   title, 
                   month_index: monthIndex, 
                   time_limit: timeLimit, 
-                  type: taskType, // ДОБАВЛЕНО: тип задания для БД
+                  type: taskType,
                   passing_score: passingScore, 
                   content 
                 }]);
