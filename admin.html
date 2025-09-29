@@ -858,130 +858,131 @@
           });
         }
         
-        window.saveTask = async function() {
-          const title = document.getElementById('taskTitle').value;
-          const monthIndex = parseInt(document.getElementById('taskMonth').value);
-          const timeLimit = parseInt(document.getElementById('taskTimeLimit').value);
-          const passingScore = parseInt(document.getElementById('taskPassingScore').value);
-          
-          if (!title) {
-            alert('Введите название задания');
-            return;
-          }
-          
-          const questions = [];
-          const questionElements = document.querySelectorAll('.subtask-item');
-          
-          if (questionElements.length === 0) {
-            alert('Добавьте хотя бы один вопрос');
-            return;
-          }
-          
-          for (let i = 0; i < questionElements.length; i++) {
-            const item = questionElements[i];
-            const questionType = item.getAttribute('data-type') || 'mcq';
-            const question = item.querySelector('.question-text').value;
-            const imageUrl = document.getElementById(`imageUrl${i + 1}`)?.value || '';
-            
-            if (!question) {
-              alert('Заполните текст вопроса');
-              return;
-            }
-            
-            if (questionType === 'mcq') {
-              const optionsText = item.querySelector('.mcq-options').value;
-              const correct = parseInt(item.querySelector('.mcq-correct').value) - 1;
-              
-              const options = optionsText.split('\n').filter(opt => opt.trim() !== '');
-              
-              if (correct < 0 || correct >= options.length) {
-                alert('Номер правильного ответа должен соответствовать одному из вариантов');
-                return;
-              }
-              
-              questions.push({
-                type: 'mcq',
-                q: question,
-                image: imageUrl || null,
-                options: options,
-                correct: correct
-              });
-            } else {
-              const answer = item.querySelector('.fill-answer').value;
-              
-              if (!answer) {
-                alert('Введите правильный ответ для вопроса с вводом текста');
-                return;
-              }
-              
-              questions.push({
-                type: 'fill',
-                q: question,
-                image: imageUrl || null,
-                answer: answer
-              });
-            }
-          }
-          
-          const content = { questions };
-          
-          // ИСПРАВЛЕНИЕ: Определяем тип задания для БД - используем только 'mcq' и 'mixed'
-          const hasMcq = questions.some(q => q.type === 'mcq');
-          const hasFill = questions.some(q => q.type === 'fill');
-          let taskType = 'mcq';
-          if (hasFill) {
-            taskType = 'mixed'; // Если есть хотя бы один fill вопрос, используем mixed
-          }
-          
-          // Сохраняем задание
-          try {
-            if (editingTaskId) {
-              // Редактирование существующего задания
-              const { error } = await supabase
-                .from('tasks')
-                .update({ 
-                  title, 
-                  month_index: monthIndex, 
-                  time_limit: timeLimit, 
-                  type: taskType,
-                  passing_score: passingScore, 
-                  content 
-                })
-                .eq('id', editingTaskId);
-                
-              if (error) {
-                alert('Ошибка при обновлении задания: ' + error.message);
-              } else {
-                alert('Задание обновлено');
-                hideTaskForm();
-                loadTasks();
-              }
-            } else {
-              // Создание нового задания
-              const { error } = await supabase
-                .from('tasks')
-                .insert([{ 
-                  title, 
-                  month_index: monthIndex, 
-                  time_limit: timeLimit, 
-                  type: taskType,
-                  passing_score: passingScore, 
-                  content 
-                }]);
-                
-              if (error) {
-                alert('Ошибка при создании задания: ' + error.message);
-              } else {
-                alert('Задание создано');
-                hideTaskForm();
-                loadTasks();
-              }
-            }
-          } catch (error) {
-            console.error('Ошибка при сохранении задания:', error);
-            alert('Ошибка при сохранении задания: ' + error.message);
-          }
-        }
+  window.saveTask = async function() {
+  const title = document.getElementById('taskTitle').value;
+  const monthIndex = parseInt(document.getElementById('taskMonth').value);
+  const timeLimit = parseInt(document.getElementById('taskTimeLimit').value);
+  const passingScore = parseInt(document.getElementById('taskPassingScore').value);
+  
+  if (!title) {
+    alert('Введите название задания');
+    return;
+  }
+  
+  const questions = [];
+  const questionElements = document.querySelectorAll('.subtask-item');
+  
+  if (questionElements.length === 0) {
+    alert('Добавьте хотя бы один вопрос');
+    return;
+  }
+  
+  for (let i = 0; i < questionElements.length; i++) {
+    const item = questionElements[i];
+    const questionType = item.getAttribute('data-type') || 'mcq';
+    const question = item.querySelector('.question-text').value;
+    const imageUrl = document.getElementById(`imageUrl${i + 1}`)?.value || '';
+    
+    if (!question) {
+      alert('Заполните текст вопроса');
+      return;
+    }
+    
+    if (questionType === 'mcq') {
+      const optionsText = item.querySelector('.mcq-options').value;
+      const correct = parseInt(item.querySelector('.mcq-correct').value) - 1;
+      
+      const options = optionsText.split('\n').filter(opt => opt.trim() !== '');
+      
+      if (correct < 0 || correct >= options.length) {
+        alert('Номер правильного ответа должен соответствовать одному из вариантов');
+        return;
+      }
+      
+      questions.push({
+        type: 'mcq',
+        q: question,
+        image: imageUrl || null,
+        options: options,
+        correct: correct
+      });
+    } else {
+      const answer = item.querySelector('.fill-answer').value;
+      
+      if (!answer) {
+        alert('Введите правильный ответ для вопроса с вводом текста');
+        return;
+      }
+      
+      questions.push({
+        type: 'fill',
+        q: question,
+        image: imageUrl || null,
+        answer: answer
+      });
+    }
+  }
+  
+  const content = { questions };
+  
+  // Правильное определение типа задания
+  const hasMcq = questions.some(q => q.type === 'mcq');
+  const hasFill = questions.some(q => q.type === 'fill');
+  
+  let taskType = 'mcq';
+  if (hasMcq && hasFill) {
+    taskType = 'mixed';
+  } else if (hasFill) {
+    taskType = 'fill';
+  }
+  
+  // Сохраняем задание
+  try {
+    if (editingTaskId) {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ 
+          title, 
+          month_index: monthIndex, 
+          time_limit: timeLimit, 
+          type: taskType,
+          passing_score: passingScore, 
+          content 
+        })
+        .eq('id', editingTaskId);
+        
+      if (error) {
+        alert('Ошибка при обновлении задания: ' + error.message);
+      } else {
+        alert('Задание обновлено');
+        hideTaskForm();
+        loadTasks();
+      }
+    } else {
+      const { error } = await supabase
+        .from('tasks')
+        .insert([{ 
+          title, 
+          month_index: monthIndex, 
+          time_limit: timeLimit, 
+          type: taskType,
+          passing_score: passingScore, 
+          content 
+        }]);
+        
+      if (error) {
+        alert('Ошибка при создании задания: ' + error.message);
+      } else {
+        alert('Задание создано');
+        hideTaskForm();
+        loadTasks();
+      }
+    }
+  } catch (error) {
+    console.error('Ошибка при сохранении задания:', error);
+    alert('Ошибка при сохранении задания: ' + error.message);
+  }
+}
         
         window.deleteTask = async function(taskId, taskTitle) {
           if (!confirm(`Вы уверены, что хотите удалить задание "${taskTitle}"?\n\nВсе связанные попытки также будут удалены.`)) return;
