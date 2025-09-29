@@ -52,6 +52,14 @@
     }
     .mcq-badge { background: #e3f2fd; color: #1976d2; }
     .fill-badge { background: #f3e5f5; color: #7b1fa2; }
+    .task-type-info {
+      background: #e7f3ff;
+      border: 1px solid #b3d9ff;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
   </style>
   
   <script src="/load-config.js"></script>
@@ -216,9 +224,11 @@
             
             if (question.type === 'mcq') {
               const selected = document.querySelector(`input[name="q${i}"]:checked`);
+              // Для авто-отправки отправляем -1 если не отвечено
               answers[i] = selected ? parseInt(selected.value) : -1;
             } else if (question.type === 'fill') {
               const answerInput = document.querySelector(`input[name="fill${i}"]`);
+              // Для авто-отправки отправляем пустую строку если не отвечено
               answers[i] = answerInput ? answerInput.value.trim() : '';
             }
           }
@@ -383,6 +393,22 @@
           
           const questions = task.content?.questions || [];
           
+          // Добавляем информацию о типах вопросов
+          const mcqCount = questions.filter(q => q.type === 'mcq').length;
+          const fillCount = questions.filter(q => q.type === 'fill').length;
+          
+          if (mcqCount > 0 && fillCount > 0) {
+            const typeInfo = document.createElement('div');
+            typeInfo.className = 'task-type-info';
+            typeInfo.innerHTML = `
+              <strong>ℹ️ Информация о задании:</strong><br>
+              • Тестовые вопросы (выбор ответа): ${mcqCount}<br>
+              • Письменные вопросы (ввод ответа): ${fillCount}<br>
+              <small>Отвечайте внимательно на все типы вопросов!</small>
+            `;
+            taskBody.appendChild(typeInfo);
+          }
+          
           questions.forEach((q, i) => {
             const questionEl = document.createElement('div');
             questionEl.className = 'question';
@@ -407,7 +433,7 @@
             
             if (q.type === 'mcq') {
               questionHTML += `<div class="options">
-                ${q.options.map((opt, j) => `
+                ${(q.options || []).map((opt, j) => `
                   <label class="option">
                     <input type="radio" name="q${i}" value="${j}">
                     <span>${escapeHtml(opt)}</span>
@@ -417,16 +443,30 @@
             } else if (q.type === 'fill') {
               questionHTML += `
                 <label class="fill-label">Ваш ответ:</label>
-                <input type="text" class="fill-input" name="fill${i}" placeholder="Введите ваш ответ здесь...">
+                <input type="text" class="fill-input" name="fill${i}" placeholder="Введите ваш ответ здесь..." autocomplete="off">
               `;
             }
             
             questionEl.innerHTML += questionHTML;
             taskBody.appendChild(questionEl);
           });
+
+          // Добавляем обработчики для текстовых полей (Enter для быстрой отправки)
+          document.querySelectorAll('.fill-input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter') {
+                // Находим кнопку отправки и кликаем её
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn && !submitBtn.disabled) {
+                  submitBtn.click();
+                }
+              }
+            });
+          });
         }
 
         function escapeHtml(text) {
+          if (!text) return '';
           const div = document.createElement('div');
           div.textContent = text;
           return div.innerHTML;
@@ -440,6 +480,7 @@
           let allAnswered = true;
           let errorMessage = '';
           
+          // Проверяем, что на все вопросы даны ответы
           for (let i = 0; i < questions.length; i++) {
             const question = questions[i];
             
@@ -450,7 +491,15 @@
               if (answers[i] === null) {
                 allAnswered = false;
                 errorMessage = 'Пожалуйста, ответьте на все тестовые вопросы';
+                // Подсвечиваем первый неотвеченный вопрос
+                const questionElement = document.querySelectorAll('.question')[i];
+                questionElement.style.background = 'rgba(255, 235, 238, 0.3)';
+                questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 break;
+              } else {
+                // Убираем подсветку если ответ дан
+                const questionElement = document.querySelectorAll('.question')[i];
+                questionElement.style.background = '';
               }
             } else if (question.type === 'fill') {
               const answerInput = document.querySelector(`input[name="fill${i}"]`);
@@ -459,13 +508,25 @@
               if (!answers[i]) {
                 allAnswered = false;
                 errorMessage = 'Пожалуйста, заполните все поля для ввода ответа';
+                // Подсвечиваем первое незаполненное поле
+                if (answerInput) {
+                  answerInput.style.borderColor = '#e74c3c';
+                  answerInput.focus();
+                  answerInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
                 break;
+              } else {
+                // Убираем подсветку если ответ дан
+                const answerInput = document.querySelector(`input[name="fill${i}"]`);
+                if (answerInput) {
+                  answerInput.style.borderColor = '';
+                }
               }
             }
           }
           
           if (!allAnswered) {
-            showModal('Ошибка', errorMessage);
+            showModal('Не все вопросы заполнены', errorMessage);
             return;
           }
 
@@ -494,11 +555,16 @@
             
             if (result.error) {
               showModal('Ошибка', result.error);
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Отправить ответ';
             } else if (result.passed) {
               taskBody.style.display = 'none';
               submitBtn.style.display = 'none';
               completedMessage.style.display = 'block';
               completedText.textContent = result.message;
+              
+              // Показываем анимацию успеха
+              showModal('🎉 Поздравляем!', result.message);
             } else {
               taskBody.style.display = 'none';
               submitBtn.style.display = 'none';
@@ -520,6 +586,9 @@
             event.returnValue = 'У вас есть незавершенная попытка. Вы уверены, что хотите уйти?';
           }
         });
+
+        // Назначаем обработчик кнопке отправки
+        submitBtn.onclick = submitAnswers;
 
         await loadTask();
         showContent();
