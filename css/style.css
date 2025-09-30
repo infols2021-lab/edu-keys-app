@@ -1,4 +1,4 @@
-/* css/style.css - ОСНОВНОЙ СТИЛЬ С ОСЕННЕЙ ТЕМОЙ */
+/* css/style.css */
 :root{
   --bg1: #fff7e6;
   --accent: #ff6b6b;
@@ -11,19 +11,15 @@
 body{
   margin:0;
   font-family: 'Poppins', "Comic Sans MS", sans-serif;
-  /* УБИРАЕМ старый градиент - будет осенний фон */
+  background: linear-gradient(135deg,#fffaf0,#ffd6a5);
   min-height:100vh;
   color:#1f2937;
-  /* Позволяем seasonal.css управлять фоном */
-  background: none !important;
 }
 
 .container {
   width:95%;
   max-width:1100px;
   margin:28px auto;
-  position: relative;
-  z-index: 10;
 }
 
 /* Simple header */
@@ -41,58 +37,35 @@ body{
 }
 .logo .mark {
   width:56px;height:56px;border-radius:12px;
-  background:linear-gradient(135deg,#ff9800,#f57c00) !important; /* Осенние цвета */
+  background:linear-gradient(135deg,var(--accent2),#6dd3c0);
   display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:20px;
-  box-shadow:0 6px 18px rgba(255,152,0,0.2);
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
 }
 .header .nav { display:flex; gap:8px; align-items:center; }
 
-/* Cards - осенний стиль */
+/* Cards */
 .card {
-  background: rgba(255, 253, 250, 0.95) !important;
+  background:var(--card);
   border-radius:16px;
   padding:18px;
-  border: 2px solid #ffa726 !important;
-  box-shadow: 
-    0 8px 26px rgba(255,152,0,0.15),
-    inset 0 1px 0 rgba(255,255,255,0.8) !important;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease !important;
-}
-.card:hover {
-  transform: translateY(-5px) !important;
-  box-shadow: 
-    0 12px 35px rgba(255,152,0,0.25),
-    inset 0 1px 0 rgba(255,255,255,0.9) !important;
+  box-shadow:0 8px 26px rgba(0,0,0,0.08);
 }
 
-/* Buttons - осенний стиль */
+/* Buttons */
 .btn {
-  background: linear-gradient(135deg, #ff9800, #f57c00) !important;
+  background:var(--accent2);
   color:#fff;
   border:0;
   padding:10px 16px;
   border-radius:12px;
   font-weight:700;
   cursor:pointer;
-  transition: all 0.3s ease !important;
-  box-shadow:0 6px 12px rgba(255,152,0,0.3) !important;
-  position: relative;
-  overflow: hidden;
+  transition: transform .12s ease, box-shadow .12s;
+  box-shadow:0 6px 12px rgba(78,205,196,0.18);
 }
-.btn:hover{ 
-  transform:translateY(-3px) !important;
-  box-shadow:0 8px 20px rgba(255,152,0,0.4) !important;
-}
-.btn.secondary { 
-  background: linear-gradient(135deg, #795548, #5d4037) !important; 
-  box-shadow:0 6px 12px rgba(121,85,72,0.3) !important;
-}
-.btn.ghost { 
-  background:transparent; 
-  color:#ff9800; 
-  border:2px solid rgba(255,152,0,0.3) !important;
-}
+.btn:hover{ transform:translateY(-3px) }
+.btn.secondary { background: var(--accent); box-shadow:0 6px 12px rgba(255,107,107,0.18) }
+.btn.ghost { background:transparent; color:var(--accent2); border:2px solid rgba(78,205,196,0.18) }
 .btn.small { padding:6px 10px; font-size:13px; border-radius:10px }
 
 /* Layout for main pages */
@@ -112,16 +85,10 @@ body{
   text-align:center;
 }
 .profile-avatar {
-  width:220px;height:220px;border-radius:20px;
-  background:linear-gradient(135deg,#fff8e6,#ffecb3) !important;
+  width:220px;height:220px;border-radius:20px;background:linear-gradient(135deg,#fff,#fff8e6);
   position:relative; display:flex;align-items:center;justify-content:center;
-  box-shadow:0 10px 24px rgba(255,152,0,0.2) !important;
-  border:4px solid #ffa726 !important;
-  transition: all 0.5s ease;
-}
-.profile-avatar:hover {
-  transform: scale(1.02);
-  box-shadow:0 15px 30px rgba(255,152,0,0.3) !important;
+  box-shadow:0 10px 24px rgba(0,0,0,0.08);
+  border:6px solid #fff6d8;
 }
 /* SVG decorative image container */
 .profile-avatar svg { width:100%; height:100%; border-radius:14px; }
@@ -129,31 +96,13 @@ body{
 /* circles for keys (over image) */
 .key-circles { position:absolute; inset:12px; pointer-events:none; }
 .key-circle {
-  width:34px;height:34px;border-radius:50%;
-  background:linear-gradient(135deg, #8d6e63, #6d4c41) !important;
+  width:34px;height:34px;border-radius:50%;background:#111;opacity:0.9;
   position:absolute; transform:translate(-50%,-50%);
-  box-shadow:0 4px 12px rgba(109,76,65,0.3) !important;
-  transition: all 0.5s ease;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
 .key-circle.filled {
-  background:linear-gradient(135deg,#ffb74d,#ff9800) !important;
-  box-shadow: 
-    0 6px 20px rgba(255,152,0,0.4),
-    0 0 20px rgba(255,193,7,0.3) !important;
-  animation: keyGlow 2s infinite alternate;
-}
-
-@keyframes keyGlow {
-  0% { 
-    box-shadow: 
-      0 6px 20px rgba(255,152,0,0.4),
-      0 0 20px rgba(255,193,7,0.3);
-  }
-  100% { 
-    box-shadow: 
-      0 6px 25px rgba(255,152,0,0.6),
-      0 0 30px rgba(255,193,7,0.5);
-  }
+  background:linear-gradient(135deg,#ffd166,#ff6b6b);
+  box-shadow:0 8px 18px rgba(255,107,107,0.28), 0 2px 6px rgba(0,0,0,0.12);
 }
 
 /* positions (7 spots) - placed in friendly arc */
@@ -167,36 +116,10 @@ body{
 
 /* Profile info */
 .profile-info { width:100%; }
-.badge { 
-  display:inline-block; 
-  padding:8px 16px; 
-  border-radius:20px; 
-  background:linear-gradient(135deg, #ffa726, #fb8c00) !important; 
-  color:#fff; 
-  font-weight:700;
-  box-shadow:0 4px 12px rgba(255,152,0,0.3) !important;
-  transition: all 0.3s ease;
-  border: none !important;
-}
-.badge:hover {
-  transform: scale(1.05);
-  box-shadow:0 6px 16px rgba(255,152,0,0.4) !important;
-}
+.badge { display:inline-block; padding:6px 10px; border-radius:999px; background:var(--accent2); color:#fff; font-weight:700; }
 
 /* Tasks list */
-.month-row { 
-  margin-bottom:12px; 
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(255, 253, 250, 0.8);
-  transition: all 0.3s ease;
-  border: 1px solid transparent;
-}
-.month-row:hover {
-  background: rgba(255, 243, 224, 0.9);
-  border-color: #ffcc80;
-  transform: translateX(5px);
-}
+.month-row { margin-bottom:12px; }
 .month-title { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
 .tasks-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
 
@@ -224,18 +147,3 @@ body{
 .input, textarea, select { padding:8px 10px; border-radius:8px; border:2px solid rgba(0,0,0,0.06); font-size:15px; width:100% }
 .small-muted{ font-size:13px; color:#666 }
 
-/* Анимация появления контента */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-#mainContent {
-  animation: fadeInUp 0.8s ease-out;
-}
