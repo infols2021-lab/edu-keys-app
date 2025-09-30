@@ -1,9 +1,9 @@
 /* css/style.css */
 :root{
-  --bg1: rgba(255, 247, 230, 0.7);
+  --bg1: #fff7e6;
   --accent: #ff6b6b;
   --accent2: #4ecdc4;
-  --card: rgba(255, 255, 255, 0.85);
+  --card: #ffffff;
   --muted:#6b6b6b;
 }
 
@@ -11,6 +11,7 @@
 body{
   margin:0;
   font-family: 'Poppins', "Comic Sans MS", sans-serif;
+  background: #ffffff;
   min-height:100vh;
   color:#1f2937;
 }
@@ -48,7 +49,7 @@ body{
   border-radius:16px;
   padding:18px;
   box-shadow:0 8px 26px rgba(0,0,0,0.08);
-  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
 /* Buttons */

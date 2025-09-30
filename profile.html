@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* СИСТЕМА ФОНА ДЛЯ МАКСИМАЛЬНОЙ ВИДИМОСТИ */
+    /* СИСТЕМА ФОНА БЕЗ ПРОЗРАЧНОСТИ */
     .background-container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: -2;
+      z-index: -1;
       overflow: hidden;
     }
     
@@ -33,43 +33,15 @@
     .background-image.loaded {
       opacity: 1;
     }
-    
-    .background-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.1); /* СИЛЬНО уменьшил затемнение */
-      z-index: -1;
-    }
 
-    /* Стили для контента - МИНИМАЛЬНАЯ прозрачность */
+    /* Контент без прозрачности */
     .page-container {
       position: relative;
       z-index: 1;
       min-height: 100vh;
-      background: rgba(255, 253, 250, 0.75); /* Уменьшил непрозрачность */
+      background: #ffffff;
       margin: 0;
       padding: 20px 0;
-    }
-
-    @media (max-width: 768px) {
-      .page-container {
-        padding: 15px 0;
-        background: rgba(255, 253, 250, 0.8); /* Чуть больше непрозрачности для мобильных */
-      }
-      
-      .background-overlay {
-        background: rgba(0, 0, 0, 0.05); /* Еще меньше затемнения на мобильных */
-      }
-    }
-
-    @media (max-width: 480px) {
-      .page-container {
-        padding: 10px 0;
-        background: rgba(255, 253, 250, 0.85);
-      }
     }
 
     /* Осенние улучшения для профиля */
@@ -94,11 +66,11 @@
       margin-bottom: 8px;
       transition: all 0.3s ease;
       border: 1px solid transparent;
-      background: rgba(255, 253, 250, 0.8); /* Полупрозрачный фон */
+      background: #ffffff;
     }
 
     .month-row:hover {
-      background: rgba(255, 243, 224, 0.9);
+      background: #fff8e1;
       border-color: #ffcc80;
       transform: translateX(5px);
     }
@@ -168,22 +140,6 @@
       display: none; 
     }
 
-    /* Улучшенная читаемость текста */
-    .card h3 {
-      color: #5d4037;
-      text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-    }
-    
-    .profile-info h3 {
-      color: #5d4037;
-      text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-    }
-    
-    .small-muted {
-      color: #5d4037;
-      text-shadow: 0 1px 1px rgba(255,255,255,0.7);
-    }
-
     /* Мобильная оптимизация */
     @media (max-width: 768px) {
       .profile-avatar {
@@ -201,6 +157,10 @@
         right: 10px;
         font-size: 10px;
         padding: 6px 10px;
+      }
+      
+      .page-container {
+        padding: 15px 0;
       }
     }
 
@@ -220,6 +180,10 @@
         gap: 8px;
         text-align: center;
       }
+      
+      .page-container {
+        padding: 10px 0;
+      }
     }
   </style>
   
@@ -229,7 +193,6 @@
   <!-- Система фона -->
   <div class="background-container" id="backgroundContainer">
     <div class="background-image" id="backgroundImage"></div>
-    <div class="background-overlay"></div>
   </div>
 
   <!-- Индикатор загрузки фона -->
@@ -344,7 +307,7 @@
       document.getElementById('errorMessage').style.display = 'none';
     }
     
-    // ===== УЛУЧШЕННАЯ СИСТЕМА ЗАГРУЗКИ ФОНА =====
+    // ===== СИСТЕМА ЗАГРУЗКИ ФОНА БЕЗ ПРОЗРАЧНОСТИ =====
     async function loadProfileBackground(supabase) {
       const backgroundLoading = document.getElementById('backgroundLoading');
       const backgroundImage = document.getElementById('backgroundImage');
@@ -366,7 +329,7 @@
         if (error) {
           // Если нет активного фона или другая ошибка
           if (error.code === 'PGRST116') {
-            console.log('ℹ️ Активный фон не найден, используем фон по умолчанию');
+            console.log('ℹ️ Активный фон не найден, используем стандартный фон');
             setDefaultBackground();
           } else {
             console.error('❌ Ошибка загрузки фона:', error);
@@ -403,20 +366,20 @@
           // Таймаут на случай долгой загрузки
           setTimeout(() => {
             if (!backgroundImage.classList.contains('loaded')) {
-              console.log('⏰ Таймаут загрузки фона, используем резервный');
+              console.log('⏰ Таймаут загрузки фона, используем стандартный');
               setDefaultBackground();
               backgroundLoading.style.display = 'none';
             }
           }, 10000); // 10 секунд таймаут
         } else {
-          // Фон по умолчанию, если нет активного
-          console.log('ℹ️ Активный фон не найден, используем фон по умолчанию');
+          // Стандартный фон, если нет активного
+          console.log('ℹ️ Активный фон не найден, используем стандартный фон');
           setDefaultBackground();
           backgroundLoading.style.display = 'none';
         }
       } catch (error) {
         console.error('❌ Ошибка загрузки фона профиля:', error);
-        // В случае ошибки используем фон по умолчанию
+        // В случае ошибки используем стандартный фон
         setDefaultBackground();
         backgroundLoading.style.display = 'none';
       }
@@ -424,10 +387,11 @@
 
     function setDefaultBackground() {
       const backgroundImage = document.getElementById('backgroundImage');
-      // Используем красивый градиент по умолчанию
-      backgroundImage.style.backgroundImage = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+      // Используем белый фон по умолчанию вместо градиента
+      backgroundImage.style.backgroundImage = "none";
+      backgroundImage.style.backgroundColor = "#ffffff";
       backgroundImage.classList.add('loaded');
-      console.log('🎨 Установлен фон по умолчанию');
+      console.log('🎨 Установлен стандартный белый фон');
     }
     
     async function initApp() {
