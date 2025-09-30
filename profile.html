@@ -6,42 +6,25 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* СИСТЕМА ФОНА БЕЗ ПРОЗРАЧНОСТИ */
-    .background-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-      overflow: hidden;
-    }
-    
-    .background-image {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+    /* СИСТЕМА ФОНА - ЧИСТЫЙ БЕЗ ПРОЗРАЧНОСТИ */
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      transition: opacity 0.8s ease-in-out;
-      opacity: 0;
-    }
-    
-    .background-image.loaded {
-      opacity: 1;
+      background-attachment: fixed;
+      font-family: 'Poppins', "Comic Sans MS", sans-serif;
+      color: #1f2937;
     }
 
-    /* Контент без прозрачности */
-    .page-container {
+    .container {
+      width: 95%;
+      max-width: 1100px;
+      margin: 20px auto;
       position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      background: #ffffff;
-      margin: 0;
-      padding: 20px 0;
+      z-index: 2;
     }
 
     /* Осенние улучшения для профиля */
@@ -70,7 +53,7 @@
     }
 
     .month-row:hover {
-      background: #fff8e1;
+      background: #fff8f0;
       border-color: #ffcc80;
       transform: translateX(5px);
     }
@@ -116,6 +99,9 @@
       text-align: center; 
       padding: 40px; 
       display: none;
+      background: white;
+      border-radius: 16px;
+      margin: 20px;
     }
     .spinner { 
       border: 4px solid #f3f3f3; 
@@ -142,6 +128,16 @@
 
     /* Мобильная оптимизация */
     @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+      }
+      
+      .container {
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+      }
+      
       .profile-avatar {
         width: 180px;
         height: 180px;
@@ -159,8 +155,8 @@
         padding: 6px 10px;
       }
       
-      .page-container {
-        padding: 15px 0;
+      .card {
+        margin: 8px 0;
       }
     }
 
@@ -180,21 +176,12 @@
         gap: 8px;
         text-align: center;
       }
-      
-      .page-container {
-        padding: 10px 0;
-      }
     }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
-<body>
-  <!-- Система фона -->
-  <div class="background-container" id="backgroundContainer">
-    <div class="background-image" id="backgroundImage"></div>
-  </div>
-
+<body id="profileBody">
   <!-- Индикатор загрузки фона -->
   <div class="background-loading" id="backgroundLoading">
     <span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; vertical-align: middle; margin-right: 5px;"></span>
@@ -202,90 +189,88 @@
   </div>
 
   <!-- Основной контент -->
-  <div class="page-container">
-    <div class="container">
-      <div id="loading" class="loading">
-        <div class="spinner"></div>
-        <p>🔄 Загружаем конфигурацию...</p>
+  <div class="container">
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>🔄 Загружаем конфигурацию...</p>
+    </div>
+    
+    <div id="errorMessage" class="error"></div>
+    
+    <div id="mainContent" style="display: none;">
+      <div class="header">
+        <div class="logo">
+          <div class="mark" style="background: linear-gradient(135deg, #ff9800, #f57c00);">EK</div>
+          <div>
+            <h3 style="background: linear-gradient(135deg, #ff9800, #e65100); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">Edu Keys</h3>
+            <div class="small-muted">🎨 Персонализированный профиль</div>
+          </div>
+        </div>
+        <div class="nav">
+          <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">📚 К заданиям</button>
+          <button class="btn secondary" id="logoutBtn" style="background: linear-gradient(135deg, #795548, #5d4037);">🚪 Выйти</button>
+        </div>
       </div>
-      
-      <div id="errorMessage" class="error"></div>
-      
-      <div id="mainContent" style="display: none;">
-        <div class="header">
-          <div class="logo">
-            <div class="mark" style="background: linear-gradient(135deg, #ff9800, #f57c00);">EK</div>
-            <div>
-              <h3 style="background: linear-gradient(135deg, #ff9800, #e65100); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">Edu Keys</h3>
-              <div class="small-muted">🎨 Персонализированный профиль</div>
+
+      <div class="grid-2">
+        <!-- left: profile -->
+        <div class="card profile-card">
+          <div class="profile-avatar" role="img" aria-label="Профиль ученика">
+            <svg viewBox="0 0 200 200" preserveAspectRatio="none" style="width:100%;height:100%;border-radius:12px">
+              <defs>
+                <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#fff8e6;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#ffecb3;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="faceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#ffd166;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#ffb74d;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#avatarGradient)"/>
+              <circle cx="100" cy="80" r="28" fill="url(#faceGradient)"/>
+              <g transform="translate(22,120)">
+                <ellipse cx="30" cy="10" rx="30" ry="12" fill="#ffcc80"/>
+                <ellipse cx="70" cy="10" rx="30" ry="12" fill="#ffcc80"/>
+              </g>
+            </svg>
+
+            <!-- overlayed key circles -->
+            <div class="key-circles" id="keyCircles">
+              <div class="key-circle kpos1" data-index="1"></div>
+              <div class="key-circle kpos2" data-index="2"></div>
+              <div class="key-circle kpos3" data-index="3"></div>
+              <div class="key-circle kpos4" data-index="4"></div>
+              <div class="key-circle kpos5" data-index="5"></div>
+              <div class="key-circle kpos6" data-index="6"></div>
+              <div class="key-circle kpos7" data-index="7"></div>
             </div>
           </div>
-          <div class="nav">
-            <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">📚 К заданиям</button>
-            <button class="btn secondary" id="logoutBtn" style="background: linear-gradient(135deg, #795548, #5d4037);">🚪 Выйти</button>
+
+          <div class="profile-info">
+            <h3 id="fullname" style="color: #5d4037; margin-bottom: 8px;">Ученик</h3>
+            <div class="small-muted" id="emailText" style="color: #8d6e63;">—</div>
+            <div style="margin-top:16px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+              <span class="badge" id="keysCount" style="background: linear-gradient(135deg, #ffa726, #fb8c00); padding: 8px 16px;">🗝️ Ключей: 0/7</span>
+              <span class="badge" id="attemptsCount" style="background: linear-gradient(135deg, #795548, #5d4037); padding: 8px 16px;">📊 Попыток: 0</span>
+            </div>
           </div>
         </div>
 
-        <div class="grid-2">
-          <!-- left: profile -->
-          <div class="card profile-card">
-            <div class="profile-avatar" role="img" aria-label="Профиль ученика">
-              <svg viewBox="0 0 200 200" preserveAspectRatio="none" style="width:100%;height:100%;border-radius:12px">
-                <defs>
-                  <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#fff8e6;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#ffecb3;stop-opacity:1" />
-                  </linearGradient>
-                  <linearGradient id="faceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" style="stop-color:#ffd166;stop-opacity:1" />
-                    <stop offset="100%" style="stop-color:#ffb74d;stop-opacity:1" />
-                  </linearGradient>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#avatarGradient)"/>
-                <circle cx="100" cy="80" r="28" fill="url(#faceGradient)"/>
-                <g transform="translate(22,120)">
-                  <ellipse cx="30" cy="10" rx="30" ry="12" fill="#ffcc80"/>
-                  <ellipse cx="70" cy="10" rx="30" ry="12" fill="#ffcc80"/>
-                </g>
-              </svg>
-
-              <!-- overlayed key circles -->
-              <div class="key-circles" id="keyCircles">
-                <div class="key-circle kpos1" data-index="1"></div>
-                <div class="key-circle kpos2" data-index="2"></div>
-                <div class="key-circle kpos3" data-index="3"></div>
-                <div class="key-circle kpos4" data-index="4"></div>
-                <div class="key-circle kpos5" data-index="5"></div>
-                <div class="key-circle kpos6" data-index="6"></div>
-                <div class="key-circle kpos7" data-index="7"></div>
-              </div>
-            </div>
-
-            <div class="profile-info">
-              <h3 id="fullname" style="color: #5d4037; margin-bottom: 8px;">Ученик</h3>
-              <div class="small-muted" id="emailText" style="color: #8d6e63;">—</div>
-              <div style="margin-top:16px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-                <span class="badge" id="keysCount" style="background: linear-gradient(135deg, #ffa726, #fb8c00); padding: 8px 16px;">🗝️ Ключей: 0/7</span>
-                <span class="badge" id="attemptsCount" style="background: linear-gradient(135deg, #795548, #5d4037); padding: 8px 16px;">📊 Попыток: 0</span>
-              </div>
-            </div>
+        <!-- right: progress / months -->
+        <div>
+          <div class="card">
+            <h3 style="color: #e65100; margin-bottom: 16px;">📊 Прогресс по месяцам</h3>
+            <div id="monthsList" style="margin-top:12px"></div>
           </div>
 
-          <!-- right: progress / months -->
-          <div>
-            <div class="card">
-              <h3 style="color: #e65100; margin-bottom: 16px;">📊 Прогресс по месяцам</h3>
-              <div id="monthsList" style="margin-top:12px"></div>
-            </div>
+          <div style="height:18px"></div>
 
-            <div style="height:18px"></div>
-
-            <div class="card">
-              <h3 style="color: #e65100; margin-bottom: 16px;">ℹ️ Информация</h3>
-              <p class="small-muted" style="color: #5d4037; line-height: 1.5;">🎯 Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
-              <p class="small-muted" style="color: #5d4037; line-height: 1.5;">📅 Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
-              <p class="small-muted" style="color: #5d4037; line-height: 1.5;"><strong>⚠️ Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
-            </div>
+          <div class="card">
+            <h3 style="color: #e65100; margin-bottom: 16px;">ℹ️ Информация</h3>
+            <p class="small-muted" style="color: #5d4037; line-height: 1.5;">🎯 Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
+            <p class="small-muted" style="color: #5d4037; line-height: 1.5;">📅 Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
+            <p class="small-muted" style="color: #5d4037; line-height: 1.5;"><strong>⚠️ Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
           </div>
         </div>
       </div>
@@ -307,10 +292,10 @@
       document.getElementById('errorMessage').style.display = 'none';
     }
     
-    // ===== СИСТЕМА ЗАГРУЗКИ ФОНА БЕЗ ПРОЗРАЧНОСТИ =====
+    // ===== ПРОСТАЯ СИСТЕМА ЗАГРУЗКИ ФОНА =====
     async function loadProfileBackground(supabase) {
       const backgroundLoading = document.getElementById('backgroundLoading');
-      const backgroundImage = document.getElementById('backgroundImage');
+      const profileBody = document.getElementById('profileBody');
       
       try {
         backgroundLoading.style.display = 'block';
@@ -330,10 +315,8 @@
           // Если нет активного фона или другая ошибка
           if (error.code === 'PGRST116') {
             console.log('ℹ️ Активный фон не найден, используем стандартный фон');
-            setDefaultBackground();
           } else {
             console.error('❌ Ошибка загрузки фона:', error);
-            setDefaultBackground();
           }
           backgroundLoading.style.display = 'none';
           return;
@@ -346,9 +329,8 @@
           const img = new Image();
           img.onload = function() {
             console.log('🖼️ Фон успешно загружен в память');
-            // Устанавливаем фон для background-image
-            backgroundImage.style.backgroundImage = `url('${background.image_url}')`;
-            backgroundImage.classList.add('loaded');
+            // Устанавливаем фон для body
+            profileBody.style.backgroundImage = `url('${background.image_url}')`;
             
             console.log('✅ Фон профиля установлен:', background.file_name);
             backgroundLoading.style.display = 'none';
@@ -356,7 +338,6 @@
           
           img.onerror = function() {
             console.error('❌ Ошибка загрузки изображения фона');
-            setDefaultBackground();
             backgroundLoading.style.display = 'none';
           };
           
@@ -365,33 +346,19 @@
           
           // Таймаут на случай долгой загрузки
           setTimeout(() => {
-            if (!backgroundImage.classList.contains('loaded')) {
-              console.log('⏰ Таймаут загрузки фона, используем стандартный');
-              setDefaultBackground();
+            if (backgroundLoading.style.display !== 'none') {
+              console.log('⏰ Таймаут загрузки фона');
               backgroundLoading.style.display = 'none';
             }
           }, 10000); // 10 секунд таймаут
         } else {
-          // Стандартный фон, если нет активного
-          console.log('ℹ️ Активный фон не найден, используем стандартный фон');
-          setDefaultBackground();
+          console.log('ℹ️ Активный фон не найден');
           backgroundLoading.style.display = 'none';
         }
       } catch (error) {
         console.error('❌ Ошибка загрузки фона профиля:', error);
-        // В случае ошибки используем стандартный фон
-        setDefaultBackground();
         backgroundLoading.style.display = 'none';
       }
-    }
-
-    function setDefaultBackground() {
-      const backgroundImage = document.getElementById('backgroundImage');
-      // Используем белый фон по умолчанию вместо градиента
-      backgroundImage.style.backgroundImage = "none";
-      backgroundImage.style.backgroundColor = "#ffffff";
-      backgroundImage.classList.add('loaded');
-      console.log('🎨 Установлен стандартный белый фон');
     }
     
     async function initApp() {
