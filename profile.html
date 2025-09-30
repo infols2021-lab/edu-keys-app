@@ -8,16 +8,17 @@
   <!-- Осенняя тема -->
   <link rel="stylesheet" href="/assets/seasonal.css">
   <style>
-    /* ПРОСТО ФОН */
+    /* ДИНАМИЧЕСКИЙ ФОН */
     body {
-      background-image: url('/assets/autumg-bg.jpg');
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
       background-repeat: no-repeat;
-      margin: 0;
-      padding: 0;
-      min-height: 100vh;
+      transition: background-image 0.5s ease-in-out;
+      position: relative;
     }
 
     /* Затемнение для читаемости */
@@ -142,6 +143,20 @@
       animation: fadeInUp 0.8s ease-out;
     }
 
+    /* Индикатор загрузки фона */
+    .background-loading {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 1000;
+      display: none;
+    }
+
     /* Адаптивность для мобильных */
     @media (max-width: 768px) {
       .container {
@@ -149,12 +164,25 @@
         padding: 15px;
         min-height: calc(100vh - 20px);
       }
+      
+      .background-loading {
+        top: 10px;
+        right: 10px;
+        font-size: 10px;
+        padding: 6px 10px;
+      }
     }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
 <body>
+  <!-- Индикатор загрузки фона -->
+  <div class="background-loading" id="backgroundLoading">
+    <span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; vertical-align: middle; margin-right: 5px;"></span>
+    Загружаем фон...
+  </div>
+
   <!-- Просто контент с фоном -->
   <div class="container">
     <div id="loading" class="loading">
@@ -367,6 +395,70 @@
       document.getElementById('errorMessage').style.display = 'none';
     }
     
+    // ===== ЗАГРУЗКА ФОНА ПРОФИЛЯ =====
+    async function loadProfileBackground() {
+      const backgroundLoading = document.getElementById('backgroundLoading');
+      
+      try {
+        backgroundLoading.style.display = 'block';
+        
+        const { data: background, error } = await supabase
+          .from('backgrounds')
+          .select('image_url, mime_type, file_name')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Ошибка загрузки фона:', error);
+          // Используем фон по умолчанию
+          setDefaultBackground();
+          return;
+        }
+
+        if (background) {
+          // Создаем изображение для предварительной загрузки
+          const img = new Image();
+          img.onload = function() {
+            // Устанавливаем фон для body после загрузки изображения
+            document.body.style.backgroundImage = `url('${background.image_url}')`;
+            
+            // Для GIF добавляем дополнительные стили
+            if (background.mime_type === 'image/gif') {
+              document.body.style.backgroundSize = 'cover';
+              document.body.style.backgroundAttachment = 'fixed';
+            }
+            
+            console.log('✅ Фон профиля загружен:', background.file_name);
+            backgroundLoading.style.display = 'none';
+          };
+          
+          img.onerror = function() {
+            console.error('❌ Ошибка загрузки изображения фона');
+            setDefaultBackground();
+            backgroundLoading.style.display = 'none';
+          };
+          
+          img.src = background.image_url;
+        } else {
+          // Фон по умолчанию, если нет активного
+          setDefaultBackground();
+          backgroundLoading.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки фона профиля:', error);
+        // В случае ошибки используем фон по умолчанию
+        setDefaultBackground();
+        backgroundLoading.style.display = 'none';
+      }
+    }
+
+    function setDefaultBackground() {
+      document.body.style.backgroundImage = "url('/assets/autumg-bg.jpg')";
+      console.log('ℹ️ Используется фон по умолчанию');
+    }
+    
     async function initApp() {
       if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
         showError('❌ Ошибка конфигурации. Переменные Supabase не загружены.');
@@ -480,6 +572,9 @@
           }
         });
 
+        // Загружаем фон ДО показа контента
+        await loadProfileBackground();
+        
         await loadProfile();
         showContent();
         return true;
