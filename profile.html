@@ -5,6 +5,8 @@
   <title>Профиль — Edu Keys</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
+  <!-- Подключаем осеннюю тему -->
+  <link rel="stylesheet" href="/assets/seasonal.css">
   <style>
     .loading { 
       text-align: center; 
@@ -33,6 +35,43 @@
       text-align: center; 
       display: none; 
     }
+
+    /* Осенние улучшения для профиля */
+    .profile-avatar {
+      border: 4px solid #ffa726;
+      box-shadow: 
+        0 12px 32px rgba(255, 152, 0, 0.2),
+        inset 0 0 20px rgba(255, 193, 7, 0.1);
+      transition: all 0.5s ease;
+    }
+
+    .profile-avatar:hover {
+      transform: scale(1.02);
+      box-shadow: 
+        0 16px 40px rgba(255, 152, 0, 0.3),
+        inset 0 0 30px rgba(255, 193, 7, 0.2);
+    }
+
+    .month-row {
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+    }
+
+    .month-row:hover {
+      background: rgba(255, 243, 224, 0.5);
+      border-color: #ffcc80;
+      transform: translateX(5px);
+    }
+
+    .month-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
   </style>
   
   <script src="/load-config.js"></script>
@@ -51,13 +90,13 @@
         <div class="logo">
           <div class="mark">EK</div>
           <div>
-            <h3>Edu Keys</h3>
-            <div class="small-muted">Учебный профиль</div>
+            <h3 style="background: linear-gradient(135deg, #ff9800, #e65100); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Edu Keys</h3>
+            <div class="small-muted">🍂 Осенний учебный профиль</div>
           </div>
         </div>
         <div class="nav">
-          <button class="btn" onclick="location.href='/tasks.html'">К заданиям</button>
-          <button class="btn secondary" id="logoutBtn">Выйти</button>
+          <button class="btn" onclick="location.href='/tasks.html'">🍁 К заданиям</button>
+          <button class="btn secondary" id="logoutBtn">🚪 Выйти</button>
         </div>
       </div>
 
@@ -66,11 +105,21 @@
         <div class="card profile-card">
           <div class="profile-avatar" role="img" aria-label="Профиль ученика">
             <svg viewBox="0 0 200 200" preserveAspectRatio="none" style="width:100%;height:100%;border-radius:12px">
-              <rect width="100%" height="100%" fill="#fff8e6"/>
-              <circle cx="100" cy="80" r="28" fill="#ffd166"/>
+              <defs>
+                <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#fff8e6;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#ffecb3;stop-opacity:1" />
+                </linearGradient>
+                <linearGradient id="faceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#ffd166;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#ffb74d;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#avatarGradient)"/>
+              <circle cx="100" cy="80" r="28" fill="url(#faceGradient)"/>
               <g transform="translate(22,120)">
-                <ellipse cx="30" cy="10" rx="30" ry="12" fill="#cde6ff"/>
-                <ellipse cx="70" cy="10" rx="30" ry="12" fill="#cde6ff"/>
+                <ellipse cx="30" cy="10" rx="30" ry="12" fill="#ffcc80"/>
+                <ellipse cx="70" cy="10" rx="30" ry="12" fill="#ffcc80"/>
               </g>
             </svg>
 
@@ -89,9 +138,9 @@
           <div class="profile-info">
             <h3 id="fullname">Ученик</h3>
             <div class="small-muted" id="emailText">—</div>
-            <div style="margin-top:12px">
-              <span class="badge" id="keysCount">Ключей: 0/7</span>
-              <span class="badge" style="background:var(--accent)" id="attemptsCount">Попыток: 0</span>
+            <div style="margin-top:12px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="badge" id="keysCount">🗝️ Ключей: 0/7</span>
+              <span class="badge" style="background:linear-gradient(135deg, #795548, #5d4037)" id="attemptsCount">📊 Попыток: 0</span>
             </div>
           </div>
         </div>
@@ -99,22 +148,25 @@
         <!-- right: progress / months -->
         <div>
           <div class="card">
-            <h3>Прогресс по месяцам</h3>
+            <h3 style="color: #e65100;">🍂 Прогресс по месяцам</h3>
             <div id="monthsList" style="margin-top:12px"></div>
           </div>
 
           <div style="height:18px"></div>
 
           <div class="card">
-            <h3>Информация</h3>
-            <p class="small-muted">Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
-            <p class="small-muted">Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
-            <p class="small-muted"><strong>Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
+            <h3 style="color: #e65100;">ℹ️ Информация</h3>
+            <p class="small-muted">🎃 Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
+            <p class="small-muted">📅 Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
+            <p class="small-muted"><strong>⚠️ Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Подключаем осенние анимации -->
+  <script src="/assets/seasonal.js"></script>
 
   <script type="module">
     document.getElementById('loading').style.display = 'block';
@@ -166,12 +218,12 @@
           const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
           document.getElementById('fullname').textContent = profile?.full_name || 'Ученик';
           document.getElementById('emailText').textContent = user.email;
-          document.getElementById('attemptsCount').textContent = `Попыток: ${profile?.attempts || 0}`;
+          document.getElementById('attemptsCount').textContent = `📊 Попыток: ${profile?.attempts || 0}`;
 
           // keys
           const { data: keys } = await supabase.from('keys').select('*').eq('user_id', user.id);
           const got = keys?.length || 0;
-          document.getElementById('keysCount').textContent = `Ключей: ${got}/7`;
+          document.getElementById('keysCount').textContent = `🗝️ Ключей: ${got}/7`;
 
           // fill circles
           document.querySelectorAll('.key-circle').forEach(el => {
@@ -200,14 +252,19 @@
             const isCompleted = hasKey;
             
             let status = '';
+            let emoji = '';
             if (isCompleted) {
-              status = '✅ Задание выполнено';
+              status = 'Задание выполнено';
+              emoji = '🎃';
             } else if (hasAttemptForMonth) {
-              status = '❌ Попытка использована';
+              status = 'Попытка использована';
+              emoji = '🕸️';
             } else if (isAvailable) {
-              status = '🟡 Доступно для выполнения';
+              status = 'Доступно для выполнения';
+              emoji = '🍁';
             } else {
-              status = '🔒 Заблокировано';
+              status = 'Заблокировано';
+              emoji = '🔒';
             }
             
             const li = document.createElement('div');
@@ -215,7 +272,7 @@
             li.innerHTML = `
               <div class="month-title">
                 <div><b>${months[i-1]}</b></div>
-                <div><span class="small-muted">${status}</span></div>
+                <div><span class="small-muted">${emoji} ${status}</span></div>
               </div>
             `;
             monthsContainer.appendChild(li);
@@ -239,23 +296,19 @@
       }
     }
     
-    const configTimeout = setTimeout(() => {
-      if (!window.SUPABASE_URL) {
-        showError('❌ Таймаут загрузки конфигурации. Используем резервные значения...');
-        window.SUPABASE_URL = 'https://dtjhlanmwjpdcdxgzzyo.supabase.co';
-        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY';
-        initApp();
-      }
-    }, 5000);
-    
-    window.addEventListener('configLoaded', () => {
-      clearTimeout(configTimeout);
-      initApp();
-    });
-    
+    // Конфигурация должна загружаться мгновенно
     if (window.SUPABASE_URL) {
-      clearTimeout(configTimeout);
       initApp();
+    } else {
+      // Ждем событие конфигурации (максимум 1 секунду)
+      const timeout = setTimeout(() => {
+        showError('❌ Таймаут загрузки конфигурации');
+      }, 1000);
+      
+      window.addEventListener('configLoaded', () => {
+        clearTimeout(timeout);
+        initApp();
+      });
     }
   </script>
 </body>

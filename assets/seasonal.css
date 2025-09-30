@@ -1,0 +1,314 @@
+/* assets/seasonal.css - Осенняя тема с анимациями */
+
+/* Основной осенний фон */
+body {
+    background: 
+        linear-gradient(135deg, 
+            rgba(255, 245, 235, 0.9) 0%,
+            rgba(255, 237, 218, 0.9) 50%,
+            rgba(255, 229, 200, 0.9) 100%),
+        url('/assets/images/autumn-bg.jpg');
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    position: relative;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* Затемнение фона для лучшей читаемости */
+.container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    z-index: -2;
+    pointer-events: none;
+}
+
+/* Анимированные декоративные элементы */
+.seasonal-decoration {
+    position: fixed;
+    pointer-events: none;
+    z-index: -1;
+    background-size: contain;
+    background-repeat: no-repeat;
+    transition: transform 0.3s ease;
+}
+
+/* Тыква с мигающими глазами */
+.pumpkin {
+    width: 80px;
+    height: 80px;
+    background-image: url('/assets/images/pumpkin.png');
+    animation: float 8s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.pumpkin::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/assets/images/pumpkin-eyes.png');
+    background-size: 60%;
+    background-position: center;
+    background-repeat: no-repeat;
+    animation: blink 4s infinite, glow 3s infinite alternate;
+}
+
+@keyframes blink {
+    0%, 85% { opacity: 1; }
+    87%, 95% { opacity: 0.3; }
+    97%, 100% { opacity: 1; }
+}
+
+@keyframes glow {
+    0% { filter: brightness(1); }
+    100% { filter: brightness(1.3); }
+}
+
+@keyframes float {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg) scale(1);
+    }
+    33% { 
+        transform: translateY(-15px) rotate(2deg) scale(1.05);
+    }
+    66% { 
+        transform: translateY(-8px) rotate(-2deg) scale(0.95);
+    }
+}
+
+/* Паутинки */
+.spider-web {
+    width: 60px;
+    height: 60px;
+    background-image: url('/assets/images/web.png');
+    animation: swing 20s infinite ease-in-out, web-glitter 8s infinite;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+@keyframes swing {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(3deg) scale(1.02); }
+    50% { transform: rotate(-2deg) scale(0.98); }
+    75% { transform: rotate(2deg) scale(1.01); }
+}
+
+@keyframes web-glitter {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* Призраки */
+.ghost {
+    width: 50px;
+    height: 70px;
+    background-image: url('/assets/images/ghost.png');
+    animation: ghost-float 12s ease-in-out infinite, ghost-fade 8s infinite;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+@keyframes ghost-float {
+    0%, 100% { 
+        transform: translateY(0px) translateX(0px);
+    }
+    25% { 
+        transform: translateY(-40px) translateX(30px);
+    }
+    50% { 
+        transform: translateY(-20px) translateX(-20px);
+    }
+    75% { 
+        transform: translateY(-50px) translateX(15px);
+    }
+}
+
+@keyframes ghost-fade {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.9; }
+}
+
+/* Свечи */
+.candle {
+    width: 30px;
+    height: 50px;
+    background-image: url('/assets/images/candle.png');
+    animation: candle-flicker 2s infinite alternate;
+    filter: drop-shadow(0 2px 8px rgba(255, 152, 0, 0.4));
+}
+
+@keyframes candle-flicker {
+    0%, 100% { 
+        opacity: 0.8; 
+        transform: scale(1);
+        filter: drop-shadow(0 2px 8px rgba(255, 152, 0, 0.4));
+    }
+    50% { 
+        opacity: 1; 
+        transform: scale(1.05);
+        filter: drop-shadow(0 2px 12px rgba(255, 152, 0, 0.6));
+    }
+}
+
+/* Осенние стили для карточек */
+.card {
+    background: rgba(255, 253, 250, 0.95);
+    border: 2px solid #ffa726;
+    border-radius: 20px;
+    box-shadow: 
+        0 12px 40px rgba(255, 152, 0, 0.15),
+        0 4px 12px rgba(121, 85, 72, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 
+        0 20px 50px rgba(255, 152, 0, 0.25),
+        0 8px 20px rgba(121, 85, 72, 0.15);
+}
+
+/* Осенние кнопки */
+.btn {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    border: none;
+    border-radius: 12px;
+    box-shadow: 
+        0 6px 20px rgba(255, 152, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 10px 25px rgba(255, 152, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn.secondary {
+    background: linear-gradient(135deg, #795548, #5d4037);
+    box-shadow: 0 6px 20px rgba(121, 85, 72, 0.3);
+}
+
+/* Ключи на аватаре с осенним стилем */
+.key-circle {
+    background: linear-gradient(135deg, #8d6e63, #6d4c41);
+    box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
+    transition: all 0.5s ease;
+}
+
+.key-circle.filled {
+    background: linear-gradient(135deg, #ffb74d, #ff9800);
+    box-shadow: 
+        0 6px 20px rgba(255, 152, 0, 0.4),
+        0 0 20px rgba(255, 193, 7, 0.3);
+    animation: key-glow 2s infinite alternate;
+}
+
+@keyframes key-glow {
+    0% { 
+        box-shadow: 
+            0 6px 20px rgba(255, 152, 0, 0.4),
+            0 0 20px rgba(255, 193, 7, 0.3);
+    }
+    100% { 
+        box-shadow: 
+            0 6px 25px rgba(255, 152, 0, 0.6),
+            0 0 30px rgba(255, 193, 7, 0.5);
+    }
+}
+
+/* Бейджи с осенним стилем */
+.badge {
+    background: linear-gradient(135deg, #ffa726, #fb8c00);
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+}
+
+/* Адаптивность для декораций */
+@media (max-width: 768px) {
+    .pumpkin { 
+        width: 60px; 
+        height: 60px; 
+        animation-duration: 10s;
+    }
+    .spider-web { 
+        width: 40px; 
+        height: 40px; 
+    }
+    .ghost { 
+        width: 35px; 
+        height: 49px; 
+    }
+    .candle {
+        width: 25px;
+        height: 42px;
+    }
+    
+    /* Уменьшаем количество элементов на мобильных */
+    .seasonal-decoration:nth-child(n+6) {
+        display: none;
+    }
+}
+
+/* Отключение анимаций для пользователей, которые их не хотят */
+@media (prefers-reduced-motion: reduce) {
+    .seasonal-decoration {
+        animation: none !important;
+    }
+    
+    .card, .btn, .badge {
+        transition: none !important;
+    }
+}
+
+/* Анимация появления контента */
+#mainContent {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
