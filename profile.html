@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <title>Профиль — Edu Keys</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- ПОДКЛЮЧАЕМ СТИЛИ В ПРАВИЛЬНОМ ПОРЯДКЕ -->
   <link rel="stylesheet" href="css/style.css">
-  <!-- Осенняя тема -->
   <link rel="stylesheet" href="/assets/seasonal.css">
   <style>
     .loading { 
@@ -15,7 +15,7 @@
     }
     .spinner { 
       border: 4px solid #f3f3f3; 
-      border-top: 4px solid var(--accent2); 
+      border-top: 4px solid #ff9800; 
       border-radius: 50%; 
       width: 40px; 
       height: 40px; 
@@ -36,80 +36,21 @@
       display: none; 
     }
 
-    /* Осенние улучшения для профиля */
-    .profile-avatar {
-      border: 4px solid #ffa726;
-      box-shadow: 
-        0 12px 32px rgba(255, 152, 0, 0.2),
-        inset 0 0 20px rgba(255, 193, 7, 0.1);
-      transition: all 0.5s ease;
-      position: relative;
-      z-index: 1;
-    }
-
-    .profile-avatar:hover {
-      transform: scale(1.02);
-      box-shadow: 
-        0 16px 40px rgba(255, 152, 0, 0.3),
-        inset 0 0 30px rgba(255, 193, 7, 0.2);
-    }
-
-    .month-row {
-      padding: 12px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-      transition: all 0.3s ease;
-      border: 1px solid transparent;
-      background: rgba(255, 253, 250, 0.8);
-    }
-
-    .month-row:hover {
-      background: rgba(255, 243, 224, 0.9);
-      border-color: #ffcc80;
-      transform: translateX(5px);
-    }
-
+    /* Дополнительные осенние стили */
     .month-title {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 8px 0;
     }
-
-    /* Улучшаем видимость контента поверх фона */
-    .container {
-      position: relative;
-      z-index: 2;
-    }
-
-    .card {
-      background: rgba(255, 253, 250, 0.95);
-      backdrop-filter: blur(10px);
-      position: relative;
-      z-index: 2;
-    }
-
-    /* Анимация появления */
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    #mainContent {
-      animation: fadeInUp 0.8s ease-out;
-    }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
 <body>
-  <!-- Осенние декорации будут добавлены через JS -->
+  <!-- Осенние декорации будут добавлены здесь -->
+  <div id="autumnDecorations"></div>
+
   <div class="container">
     <div id="loading" class="loading">
       <div class="spinner"></div>
@@ -121,15 +62,15 @@
     <div id="mainContent" style="display: none;">
       <div class="header">
         <div class="logo">
-          <div class="mark" style="background: linear-gradient(135deg, #ff9800, #f57c00);">EK</div>
+          <div class="mark">EK</div>
           <div>
             <h3 style="background: linear-gradient(135deg, #ff9800, #e65100); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">Edu Keys</h3>
             <div class="small-muted">🍂 Осенний учебный профиль</div>
           </div>
         </div>
         <div class="nav">
-          <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">🍁 К заданиям</button>
-          <button class="btn secondary" id="logoutBtn" style="background: linear-gradient(135deg, #795548, #5d4037);">🚪 Выйти</button>
+          <button class="btn" onclick="location.href='/tasks.html'">🍁 К заданиям</button>
+          <button class="btn secondary" id="logoutBtn">🚪 Выйти</button>
         </div>
       </div>
 
@@ -172,8 +113,8 @@
             <h3 id="fullname" style="color: #5d4037; margin-bottom: 8px;">Ученик</h3>
             <div class="small-muted" id="emailText" style="color: #8d6e63;">—</div>
             <div style="margin-top:16px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-              <span class="badge" id="keysCount" style="background: linear-gradient(135deg, #ffa726, #fb8c00); padding: 8px 16px;">🗝️ Ключей: 0/7</span>
-              <span class="badge" id="attemptsCount" style="background: linear-gradient(135deg, #795548, #5d4037); padding: 8px 16px;">📊 Попыток: 0</span>
+              <span class="badge" id="keysCount">🗝️ Ключей: 0/7</span>
+              <span class="badge" id="attemptsCount">📊 Попыток: 0</span>
             </div>
           </div>
         </div>
@@ -198,13 +139,15 @@
     </div>
   </div>
 
-  <!-- Осенние анимации -->
+  <!-- СКРИПТ ДЛЯ ОСЕННИХ ДЕКОРАЦИЙ -->
   <script>
-    // Простой скрипт для осенних декораций
+    // Добавляем осенние декорации сразу после загрузки DOM
     document.addEventListener('DOMContentLoaded', function() {
       console.log('🎃 Добавляем осенние декорации...');
       
-      // Создаем элементы декора
+      const decorationsContainer = document.getElementById('autumnDecorations');
+      
+      // Конфигурация декораций
       const decorations = [
         // Тыквы
         { type: 'pumpkin', top: '5%', left: '3%', size: '80px' },
@@ -216,18 +159,22 @@
         { type: 'web', top: '3%', left: '15%', size: '60px' },
         { type: 'web', top: '8%', left: '70%', size: '55px' },
         { type: 'web', top: '87%', left: '20%', size: '65px' },
+        { type: 'web', top: '90%', left: '75%', size: '50px' },
         
         // Призраки
         { type: 'ghost', top: '25%', left: '12%', size: '50px' },
         { type: 'ghost', top: '35%', left: '82%', size: '45px' },
         { type: 'ghost', top: '65%', left: '18%', size: '55px' },
+        { type: 'ghost', top: '55%', left: '85%', size: '40px' },
         
         // Свечи
         { type: 'candle', top: '15%', left: '25%', size: '30px' },
         { type: 'candle', top: '20%', left: '60%', size: '25px' },
-        { type: 'candle', top: '70%', left: '30%', size: '35px' }
+        { type: 'candle', top: '70%', left: '30%', size: '35px' },
+        { type: 'candle', top: '75%', left: '65%', size: '28px' }
       ];
 
+      // Создаем элементы декора
       decorations.forEach((dec, index) => {
         const element = document.createElement('div');
         element.className = `autumn-${dec.type}`;
@@ -237,72 +184,18 @@
           height: ${dec.size};
           top: ${dec.top};
           left: ${dec.left};
-          background-image: url('/assets/images/${dec.type}.png');
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: center;
           pointer-events: none;
-          z-index: 1;
-          animation: ${getAnimation(dec.type)} infinite;
-          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+          z-index: 5;
         `;
         
-        document.body.appendChild(element);
+        // Добавляем случайные задержки анимации
+        const delay = Math.random() * 5;
+        element.style.animationDelay = `${delay}s`;
+        
+        decorationsContainer.appendChild(element);
       });
 
-      function getAnimation(type) {
-        const animations = {
-          pumpkin: 'pumpkinFloat 8s ease-in-out infinite',
-          web: 'webSwing 15s ease-in-out infinite',
-          ghost: 'ghostFloat 12s ease-in-out infinite',
-          candle: 'candleFlicker 3s ease-in-out infinite'
-        };
-        return animations[type] || 'pumpkinFloat 8s ease-in-out infinite';
-      }
-
-      // Добавляем CSS анимации
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes pumpkinFloat {
-          0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-          33% { transform: translateY(-20px) rotate(3deg) scale(1.05); }
-          66% { transform: translateY(-10px) rotate(-3deg) scale(0.95); }
-        }
-        
-        @keyframes webSwing {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          25% { transform: rotate(5deg) scale(1.02); }
-          50% { transform: rotate(-3deg) scale(0.98); }
-          75% { transform: rotate(3deg) scale(1.01); }
-        }
-        
-        @keyframes ghostFloat {
-          0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.7; }
-          25% { transform: translateY(-30px) translateX(20px) scale(1.05); opacity: 0.9; }
-          50% { transform: translateY(-15px) translateX(-15px) scale(0.95); opacity: 0.8; }
-          75% { transform: translateY(-35px) translateX(10px) scale(1.03); opacity: 0.85; }
-        }
-        
-        @keyframes candleFlicker {
-          0%, 100% { opacity: 0.8; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-
-        /* Адаптивность для мобильных */
-        @media (max-width: 768px) {
-          .autumn-pumpkin, .autumn-web, .autumn-ghost, .autumn-candle {
-            transform: scale(0.7);
-          }
-          
-          .autumn-pumpkin:nth-child(n+3),
-          .autumn-web:nth-child(n+4),
-          .autumn-ghost:nth-child(n+4),
-          .autumn-candle:nth-child(n+3) {
-            display: none;
-          }
-        }
-      `;
-      document.head.appendChild(style);
+      console.log('✅ Осенние декорации добавлены!');
     });
   </script>
 
@@ -369,12 +262,8 @@
             const found = keys?.some(k => k.month_index === idx);
             if (found) { 
               el.classList.add('filled'); 
-              el.style.background = 'linear-gradient(135deg, #ffb74d, #ff9800)';
-              el.style.boxShadow = '0 6px 20px rgba(255, 152, 0, 0.4), 0 0 20px rgba(255, 193, 7, 0.3)';
             } else { 
-              el.classList.remove('filled');
-              el.style.background = 'linear-gradient(135deg, #8d6e63, #6d4c41)';
-              el.style.boxShadow = '0 4px 12px rgba(109, 76, 65, 0.3)';
+              el.classList.remove('filled'); 
             }
           });
 

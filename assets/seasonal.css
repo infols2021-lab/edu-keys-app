@@ -1,16 +1,15 @@
-/* assets/seasonal.css - Осенняя тема */
-
-/* Основной осенний фон */
+/* assets/seasonal.css - ОСЕННИЙ ФОН И ДЕКОРАЦИИ */
 body {
     background: 
         linear-gradient(135deg, 
-            rgba(255, 245, 235, 0.85) 0%,
-            rgba(255, 237, 218, 0.85) 50%,
-            rgba(255, 229, 200, 0.85) 100%),
-        url('/assets/images/autumn-bg.jpg');
-    background-size: cover;
-    background-attachment: fixed;
-    background-position: center;
+            rgba(255, 245, 235, 0.9) 0%,
+            rgba(255, 237, 218, 0.9) 50%,
+            rgba(255, 229, 200, 0.9) 100%),
+        url('/assets/images/autumn-bg.jpg') !important;
+    background-size: cover !important;
+    background-attachment: fixed !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
     position: relative;
     overflow-x: hidden;
     min-height: 100vh;
@@ -18,110 +17,171 @@ body {
     padding: 0;
 }
 
-/* Убедимся, что контент поверх фона */
-.container {
-    position: relative;
-    z-index: 10;
+/* Затемнение фона для читаемости */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: -1;
+    pointer-events: none;
 }
 
-/* Осенние стили для карточек */
-.card {
-    background: rgba(255, 253, 250, 0.95) !important;
-    border: 2px solid #ffa726 !important;
-    border-radius: 20px !important;
-    box-shadow: 
-        0 12px 40px rgba(255, 152, 0, 0.15),
-        0 4px 12px rgba(121, 85, 72, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease !important;
+/* Стили для осенних декораций */
+.autumn-pumpkin {
+    position: fixed !important;
+    width: 80px;
+    height: 80px;
+    background-image: url('/assets/images/pumpkin.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    pointer-events: none;
+    z-index: 5;
+    animation: pumpkinFloat 8s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
 }
 
-.card:hover {
-    transform: translateY(-5px) !important;
-    box-shadow: 
-        0 20px 50px rgba(255, 152, 0, 0.25),
-        0 8px 20px rgba(121, 85, 72, 0.15) !important;
-}
-
-/* Осенние кнопки */
-.btn {
-    background: linear-gradient(135deg, #ff9800, #f57c00) !important;
-    border: none !important;
-    border-radius: 12px !important;
-    box-shadow: 
-        0 6px 20px rgba(255, 152, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-    transition: all 0.3s ease !important;
-    font-weight: 600;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn:hover {
-    transform: translateY(-3px) !important;
-    box-shadow: 
-        0 10px 25px rgba(255, 152, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
-}
-
-.btn.secondary {
-    background: linear-gradient(135deg, #795548, #5d4037) !important;
-    box-shadow: 0 6px 20px rgba(121, 85, 72, 0.3) !important;
-}
-
-/* Ключи на аватаре */
-.key-circle {
-    background: linear-gradient(135deg, #8d6e63, #6d4c41);
-    box-shadow: 0 4px 12px rgba(109, 76, 65, 0.3);
-    transition: all 0.5s ease;
-    border-radius: 50%;
+.autumn-pumpkin::before {
+    content: '';
     position: absolute;
-    width: 34px;
-    height: 34px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('/assets/images/pumpkin-eyes.png') !important;
+    background-size: 60% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    animation: blink 4s infinite;
 }
 
-.key-circle.filled {
-    background: linear-gradient(135deg, #ffb74d, #ff9800) !important;
-    box-shadow: 
-        0 6px 20px rgba(255, 152, 0, 0.4),
-        0 0 20px rgba(255, 193, 7, 0.3) !important;
-    animation: key-glow 2s infinite alternate;
+.autumn-web {
+    position: fixed !important;
+    width: 60px;
+    height: 60px;
+    background-image: url('/assets/images/web.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    pointer-events: none;
+    z-index: 5;
+    animation: webSwing 15s ease-in-out infinite;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-@keyframes key-glow {
-    0% { 
-        box-shadow: 
-            0 6px 20px rgba(255, 152, 0, 0.4),
-            0 0 20px rgba(255, 193, 7, 0.3);
+.autumn-ghost {
+    position: fixed !important;
+    width: 50px;
+    height: 70px;
+    background-image: url('/assets/images/ghost.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    pointer-events: none;
+    z-index: 5;
+    animation: ghostFloat 12s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.autumn-candle {
+    position: fixed !important;
+    width: 30px;
+    height: 50px;
+    background-image: url('/assets/images/candle.png') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    pointer-events: none;
+    z-index: 5;
+    animation: candleFlicker 3s ease-in-out infinite;
+    filter: drop-shadow(0 2px 8px rgba(255,152,0,0.4));
+}
+
+/* Анимации */
+@keyframes pumpkinFloat {
+    0%, 100% { 
+        transform: translateY(0) rotate(0deg) scale(1); 
     }
-    100% { 
-        box-shadow: 
-            0 6px 25px rgba(255, 152, 0, 0.6),
-            0 0 30px rgba(255, 193, 7, 0.5);
+    33% { 
+        transform: translateY(-20px) rotate(3deg) scale(1.05); 
+    }
+    66% { 
+        transform: translateY(-10px) rotate(-3deg) scale(0.95); 
     }
 }
 
-/* Позиции ключей */
-.kpos1{ left: 20%; top: 28% }
-.kpos2{ left: 40%; top: 16% }
-.kpos3{ left: 60%; top: 14% }
-.kpos4{ left: 80%; top: 26% }
-.kpos5{ left: 74%; top: 54% }
-.kpos6{ left: 50%; top: 66% }
-.kpos7{ left: 26%; top: 58% }
-
-/* Бейджи */
-.badge {
-    background: linear-gradient(135deg, #ffa726, #fb8c00) !important;
-    border-radius: 20px !important;
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3) !important;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: none !important;
+@keyframes blink {
+    0%, 85% { opacity: 1; }
+    87%, 95% { opacity: 0.3; }
+    97%, 100% { opacity: 1; }
 }
 
-.badge:hover {
-    transform: scale(1.05) !important;
-    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4) !important;
+@keyframes webSwing {
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(5deg) scale(1.02); }
+    50% { transform: rotate(-3deg) scale(0.98); }
+    75% { transform: rotate(3deg) scale(1.01); }
+}
+
+@keyframes ghostFloat {
+    0%, 100% { 
+        transform: translateY(0) translateX(0) scale(1); 
+        opacity: 0.7; 
+    }
+    25% { 
+        transform: translateY(-30px) translateX(20px) scale(1.05); 
+        opacity: 0.9; 
+    }
+    50% { 
+        transform: translateY(-15px) translateX(-15px) scale(0.95); 
+        opacity: 0.8; 
+    }
+    75% { 
+        transform: translateY(-35px) translateX(10px) scale(1.03); 
+        opacity: 0.85; 
+    }
+}
+
+@keyframes candleFlicker {
+    0%, 100% { 
+        opacity: 0.8; 
+        transform: scale(1); 
+        filter: drop-shadow(0 2px 8px rgba(255,152,0,0.4));
+    }
+    50% { 
+        opacity: 1; 
+        transform: scale(1.1); 
+        filter: drop-shadow(0 2px 12px rgba(255,152,0,0.6));
+    }
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .autumn-pumpkin, 
+    .autumn-web, 
+    .autumn-ghost, 
+    .autumn-candle {
+        transform: scale(0.7);
+    }
+    
+    .autumn-pumpkin:nth-child(n+3),
+    .autumn-web:nth-child(n+4),
+    .autumn-ghost:nth-child(n+4),
+    .autumn-candle:nth-child(n+3) {
+        display: none;
+    }
+}
+
+/* Отключение анимаций для пользователей с prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    .autumn-pumpkin,
+    .autumn-web,
+    .autumn-ghost,
+    .autumn-candle {
+        animation: none !important;
+    }
 }
