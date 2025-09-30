@@ -8,99 +8,28 @@
   <!-- Осенняя тема -->
   <link rel="stylesheet" href="/assets/seasonal.css">
   <style>
-    /* Базовые стили фона */
+    /* ПРОСТО ФОН */
     body {
+      background-image: url('/assets/autumn-bg.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
       margin: 0;
       padding: 0;
       min-height: 100vh;
-      position: relative;
-      background: linear-gradient(135deg, #ffd54f 0%, #ffb74d 100%);
-    }
-
-    /* Контейнер для фона */
-    .background-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      transition: background-image 0.5s ease;
     }
 
     /* Затемнение для читаемости */
-    .background-overlay {
+    body::before {
+      content: '';
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.3);
-      z-index: 1;
-    }
-
-    /* Стили для управления фоном */
-    .bg-controls {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 10px;
-      border-radius: 10px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 167, 38, 0.3);
-    }
-
-    .bg-btn {
-      background: linear-gradient(135deg, #ff9800, #f57c00);
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin: 2px;
-      font-size: 12px;
-    }
-
-    .bg-btn:hover {
-      background: linear-gradient(135deg, #f57c00, #e65100);
-    }
-
-    .bg-presets {
-      display: flex;
-      gap: 5px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-      max-width: 200px;
-    }
-
-    .bg-preset {
-      width: 40px;
-      height: 40px;
-      border-radius: 4px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      background-size: cover;
-      background-position: center;
-    }
-
-    .bg-preset:hover {
-      border-color: #ff9800;
-      transform: scale(1.1);
-    }
-
-    .bg-preset.active {
-      border-color: #ff9800;
-      box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
-    }
-
-    /* Скрываем файловый инпут */
-    #bgFileInput {
-      display: none;
+      z-index: 0;
     }
 
     .loading { 
@@ -108,7 +37,7 @@
       padding: 40px; 
       display: none;
       position: relative;
-      z-index: 3;
+      z-index: 2;
     }
     .spinner { 
       border: 4px solid #f3f3f3; 
@@ -132,7 +61,7 @@
       text-align: center; 
       display: none; 
       position: relative;
-      z-index: 3;
+      z-index: 2;
     }
 
     /* Осенние улучшения для профиля */
@@ -220,49 +149,13 @@
         padding: 15px;
         min-height: calc(100vh - 20px);
       }
-      
-      .bg-controls {
-        top: 10px;
-        right: 10px;
-        padding: 8px;
-      }
-      
-      .bg-presets {
-        max-width: 150px;
-      }
-      
-      .bg-preset {
-        width: 30px;
-        height: 30px;
-      }
     }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
 <body>
-  <!-- Контейнер для фона -->
-  <div class="background-container" id="backgroundContainer"></div>
-  <div class="background-overlay"></div>
-
-  <!-- Панель управления фоном -->
-  <div class="bg-controls">
-    <button class="bg-btn" onclick="document.getElementById('bgFileInput').click()">
-      📁 Загрузить фон
-    </button>
-    <button class="bg-btn" onclick="resetBackground()">
-      🔄 Сбросить
-    </button>
-    
-    <div class="bg-presets" id="bgPresets">
-      <!-- Пресеты будут добавлены через JS -->
-    </div>
-  </div>
-
-  <!-- Скрытый input для загрузки файлов -->
-  <input type="file" id="bgFileInput" accept="image/*">
-
-  <!-- Осенние декорации будут добавлены через JS -->
+  <!-- Просто контент с фоном -->
   <div class="container">
     <div id="loading" class="loading">
       <div class="spinner"></div>
@@ -350,88 +243,6 @@
       </div>
     </div>
   </div>
-
-  <!-- СКРИПТ ДЛЯ УПРАВЛЕНИЯ ФОНОМ -->
-  <script>
-    // Готовые пресеты фонов
-    const backgroundPresets = [
-      { name: 'Осенний', url: '/assets/autumn.bg' },
-      { name: 'Градиент', type: 'gradient', colors: ['#ffd54f', '#ffb74d'] },
-      { name: 'Лес', type: 'url', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80' },
-      { name: 'Горы', type: 'url', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80' },
-      { name: 'Книги', type: 'url', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80' }
-    ];
-
-    // Инициализация управления фоном
-    function initBackgroundManager() {
-      const container = document.getElementById('backgroundContainer');
-      const presetsContainer = document.getElementById('bgPresets');
-      const fileInput = document.getElementById('bgFileInput');
-
-      // Создаем пресеты
-      backgroundPresets.forEach((preset, index) => {
-        const presetEl = document.createElement('div');
-        presetEl.className = 'bg-preset';
-        presetEl.title = preset.name;
-        
-        if (preset.type === 'gradient') {
-          presetEl.style.background = `linear-gradient(135deg, ${preset.colors[0]}, ${preset.colors[1]})`;
-        } else {
-          presetEl.style.backgroundImage = `url('${preset.url}')`;
-        }
-        
-        presetEl.onclick = () => setBackground(preset);
-        presetsContainer.appendChild(presetEl);
-      });
-
-      // Обработчик загрузки файлов
-      fileInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            setBackground({
-              name: 'Загруженный фон',
-              type: 'custom',
-              url: e.target.result
-            });
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-
-      // Устанавливаем фон по умолчанию
-      setBackground(backgroundPresets[0]);
-    }
-
-    // Установка фона
-    function setBackground(preset) {
-      const container = document.getElementById('backgroundContainer');
-      
-      if (preset.type === 'gradient') {
-        container.style.backgroundImage = `linear-gradient(135deg, ${preset.colors[0]}, ${preset.colors[1]})`;
-      } else {
-        container.style.backgroundImage = `url('${preset.url}')`;
-      }
-      
-      // Обновляем активный пресет
-      document.querySelectorAll('.bg-preset').forEach((el, index) => {
-        if (backgroundPresets[index] === preset) {
-          el.classList.add('active');
-        } else {
-          el.classList.remove('active');
-        }
-      });
-    }
-
-    // Сброс фона
-    function resetBackground() {
-      setBackground(backgroundPresets[0]);
-    }
-
-    // Инициализируем при загрузке
-    document.addEventListener('DOMContentLoaded', initBackgroundManager);
-  </script>
 
   <!-- Осенние анимации -->
   <script>
