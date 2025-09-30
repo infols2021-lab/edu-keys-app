@@ -5,8 +5,6 @@
   <title>Профиль — Edu Keys</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Осенняя тема -->
-  <link rel="stylesheet" href="/assets/seasonal.css">
   <style>
     .loading { 
       text-align: center; 
@@ -36,80 +34,95 @@
       display: none; 
     }
 
-    /* Осенние улучшения для профиля */
-    .profile-avatar {
-      border: 4px solid #ffa726;
-      box-shadow: 
-        0 12px 32px rgba(255, 152, 0, 0.2),
-        inset 0 0 20px rgba(255, 193, 7, 0.1);
-      transition: all 0.5s ease;
+    /* Просто добавляем фон и статичные изображения */
+    body {
+      background: url('/assets/images/autumn-bg.jpg') no-repeat center center fixed;
+      background-size: cover;
       position: relative;
-      z-index: 1;
     }
 
-    .profile-avatar:hover {
-      transform: scale(1.02);
-      box-shadow: 
-        0 16px 40px rgba(255, 152, 0, 0.3),
-        inset 0 0 30px rgba(255, 193, 7, 0.2);
+    /* Затемняем фон для лучшей читаемости */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.7);
+      z-index: -1;
     }
 
-    .month-row {
-      padding: 12px;
-      border-radius: 12px;
-      margin-bottom: 8px;
-      transition: all 0.3s ease;
-      border: 1px solid transparent;
-      background: rgba(255, 253, 250, 0.8);
+    /* Статичные изображения призраков */
+    .static-ghost {
+      position: fixed;
+      width: 80px;
+      height: 80px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      z-index: 0;
+      pointer-events: none;
     }
 
-    .month-row:hover {
-      background: rgba(255, 243, 224, 0.9);
-      border-color: #ffcc80;
-      transform: translateX(5px);
+    /* Позиции для призраков */
+    .ghost-1 {
+      top: 10%;
+      left: 5%;
+      background-image: url('/assets/images/ghost.png');
     }
 
-    .month-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 0;
+    .ghost-2 {
+      top: 15%;
+      right: 5%;
+      background-image: url('/assets/images/ghost.png');
     }
 
-    /* Улучшаем видимость контента поверх фона */
+    .ghost-3 {
+      bottom: 10%;
+      left: 8%;
+      background-image: url('/assets/images/ghost.png');
+    }
+
+    /* Тыквы статичные */
+    .static-pumpkin {
+      position: fixed;
+      width: 70px;
+      height: 70px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .pumpkin-1 {
+      top: 20%;
+      left: 3%;
+      background-image: url('/assets/images/pumpkin.png');
+    }
+
+    .pumpkin-2 {
+      bottom: 15%;
+      right: 4%;
+      background-image: url('/assets/images/pumpkin.png');
+    }
+
+    /* Убедимся что контент поверх фона */
     .container {
       position: relative;
-      z-index: 2;
-    }
-
-    .card {
-      background: rgba(255, 253, 250, 0.95);
-      backdrop-filter: blur(10px);
-      position: relative;
-      z-index: 2;
-    }
-
-    /* Анимация появления */
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    #mainContent {
-      animation: fadeInUp 0.8s ease-out;
+      z-index: 1;
     }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
 <body>
-  <!-- Осенние декорации будут добавлены через JS -->
+  <!-- Статичные декорации -->
+  <div class="static-ghost ghost-1"></div>
+  <div class="static-ghost ghost-2"></div>
+  <div class="static-ghost ghost-3"></div>
+  <div class="static-pumpkin pumpkin-1"></div>
+  <div class="static-pumpkin pumpkin-2"></div>
+
   <div class="container">
     <div id="loading" class="loading">
       <div class="spinner"></div>
@@ -121,15 +134,15 @@
     <div id="mainContent" style="display: none;">
       <div class="header">
         <div class="logo">
-          <div class="mark" style="background: linear-gradient(135deg, #ff9800, #f57c00);">EK</div>
+          <div class="mark">EK</div>
           <div>
-            <h3 style="background: linear-gradient(135deg, #ff9800, #e65100); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">Edu Keys</h3>
-            <div class="small-muted">🍂 Осенний учебный профиль</div>
+            <h3>Edu Keys</h3>
+            <div class="small-muted">Учебный профиль</div>
           </div>
         </div>
         <div class="nav">
-          <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">🍁 К заданиям</button>
-          <button class="btn secondary" id="logoutBtn" style="background: linear-gradient(135deg, #795548, #5d4037);">🚪 Выйти</button>
+          <button class="btn" onclick="location.href='/tasks.html'">К заданиям</button>
+          <button class="btn secondary" id="logoutBtn">Выйти</button>
         </div>
       </div>
 
@@ -138,21 +151,11 @@
         <div class="card profile-card">
           <div class="profile-avatar" role="img" aria-label="Профиль ученика">
             <svg viewBox="0 0 200 200" preserveAspectRatio="none" style="width:100%;height:100%;border-radius:12px">
-              <defs>
-                <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style="stop-color:#fff8e6;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#ffecb3;stop-opacity:1" />
-                </linearGradient>
-                <linearGradient id="faceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style="stop-color:#ffd166;stop-opacity:1" />
-                  <stop offset="100%" style="stop-color:#ffb74d;stop-opacity:1" />
-                </linearGradient>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#avatarGradient)"/>
-              <circle cx="100" cy="80" r="28" fill="url(#faceGradient)"/>
+              <rect width="100%" height="100%" fill="#fff8e6"/>
+              <circle cx="100" cy="80" r="28" fill="#ffd166"/>
               <g transform="translate(22,120)">
-                <ellipse cx="30" cy="10" rx="30" ry="12" fill="#ffcc80"/>
-                <ellipse cx="70" cy="10" rx="30" ry="12" fill="#ffcc80"/>
+                <ellipse cx="30" cy="10" rx="30" ry="12" fill="#cde6ff"/>
+                <ellipse cx="70" cy="10" rx="30" ry="12" fill="#cde6ff"/>
               </g>
             </svg>
 
@@ -169,11 +172,11 @@
           </div>
 
           <div class="profile-info">
-            <h3 id="fullname" style="color: #5d4037; margin-bottom: 8px;">Ученик</h3>
-            <div class="small-muted" id="emailText" style="color: #8d6e63;">—</div>
-            <div style="margin-top:16px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-              <span class="badge" id="keysCount" style="background: linear-gradient(135deg, #ffa726, #fb8c00); padding: 8px 16px;">🗝️ Ключей: 0/7</span>
-              <span class="badge" id="attemptsCount" style="background: linear-gradient(135deg, #795548, #5d4037); padding: 8px 16px;">📊 Попыток: 0</span>
+            <h3 id="fullname">Ученик</h3>
+            <div class="small-muted" id="emailText">—</div>
+            <div style="margin-top:12px">
+              <span class="badge" id="keysCount">Ключей: 0/7</span>
+              <span class="badge" style="background:var(--accent)" id="attemptsCount">Попыток: 0</span>
             </div>
           </div>
         </div>
@@ -181,130 +184,22 @@
         <!-- right: progress / months -->
         <div>
           <div class="card">
-            <h3 style="color: #e65100; margin-bottom: 16px;">🍂 Прогресс по месяцам</h3>
+            <h3>Прогресс по месяцам</h3>
             <div id="monthsList" style="margin-top:12px"></div>
           </div>
 
           <div style="height:18px"></div>
 
           <div class="card">
-            <h3 style="color: #e65100; margin-bottom: 16px;">ℹ️ Информация</h3>
-            <p class="small-muted" style="color: #5d4037; line-height: 1.5;">🎃 Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
-            <p class="small-muted" style="color: #5d4037; line-height: 1.5;">📅 Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
-            <p class="small-muted" style="color: #5d4037; line-height: 1.5;"><strong>⚠️ Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
+            <h3>Информация</h3>
+            <p class="small-muted">Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
+            <p class="small-muted">Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
+            <p class="small-muted"><strong>Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
           </div>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- Осенние анимации -->
-  <script>
-    // Простой скрипт для осенних декораций
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🎃 Добавляем осенние декорации...');
-      
-      // Создаем элементы декора
-      const decorations = [
-        // Тыквы
-        { type: 'pumpkin', top: '5%', left: '3%', size: '80px' },
-        { type: 'pumpkin', top: '10%', left: '92%', size: '90px' },
-        { type: 'pumpkin', top: '82%', left: '4%', size: '70px' },
-        { type: 'pumpkin', top: '78%', left: '88%', size: '85px' },
-        
-        // Паутинки
-        { type: 'web', top: '3%', left: '15%', size: '60px' },
-        { type: 'web', top: '8%', left: '70%', size: '55px' },
-        { type: 'web', top: '87%', left: '20%', size: '65px' },
-        
-        // Призраки
-        { type: 'ghost', top: '25%', left: '12%', size: '50px' },
-        { type: 'ghost', top: '35%', left: '82%', size: '45px' },
-        { type: 'ghost', top: '65%', left: '18%', size: '55px' },
-        
-        // Свечи
-        { type: 'candle', top: '15%', left: '25%', size: '30px' },
-        { type: 'candle', top: '20%', left: '60%', size: '25px' },
-        { type: 'candle', top: '70%', left: '30%', size: '35px' }
-      ];
-
-      decorations.forEach((dec, index) => {
-        const element = document.createElement('div');
-        element.className = `autumn-${dec.type}`;
-        element.style.cssText = `
-          position: fixed;
-          width: ${dec.size};
-          height: ${dec.size};
-          top: ${dec.top};
-          left: ${dec.left};
-          background-image: url('/assets/images/${dec.type}.png');
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: center;
-          pointer-events: none;
-          z-index: 1;
-          animation: ${getAnimation(dec.type)} infinite;
-          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-        `;
-        
-        document.body.appendChild(element);
-      });
-
-      function getAnimation(type) {
-        const animations = {
-          pumpkin: 'pumpkinFloat 8s ease-in-out infinite',
-          web: 'webSwing 15s ease-in-out infinite',
-          ghost: 'ghostFloat 12s ease-in-out infinite',
-          candle: 'candleFlicker 3s ease-in-out infinite'
-        };
-        return animations[type] || 'pumpkinFloat 8s ease-in-out infinite';
-      }
-
-      // Добавляем CSS анимации
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes pumpkinFloat {
-          0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-          33% { transform: translateY(-20px) rotate(3deg) scale(1.05); }
-          66% { transform: translateY(-10px) rotate(-3deg) scale(0.95); }
-        }
-        
-        @keyframes webSwing {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          25% { transform: rotate(5deg) scale(1.02); }
-          50% { transform: rotate(-3deg) scale(0.98); }
-          75% { transform: rotate(3deg) scale(1.01); }
-        }
-        
-        @keyframes ghostFloat {
-          0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.7; }
-          25% { transform: translateY(-30px) translateX(20px) scale(1.05); opacity: 0.9; }
-          50% { transform: translateY(-15px) translateX(-15px) scale(0.95); opacity: 0.8; }
-          75% { transform: translateY(-35px) translateX(10px) scale(1.03); opacity: 0.85; }
-        }
-        
-        @keyframes candleFlicker {
-          0%, 100% { opacity: 0.8; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-
-        /* Адаптивность для мобильных */
-        @media (max-width: 768px) {
-          .autumn-pumpkin, .autumn-web, .autumn-ghost, .autumn-candle {
-            transform: scale(0.7);
-          }
-          
-          .autumn-pumpkin:nth-child(n+3),
-          .autumn-web:nth-child(n+4),
-          .autumn-ghost:nth-child(n+4),
-          .autumn-candle:nth-child(n+3) {
-            display: none;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    });
-  </script>
 
   <script type="module">
     document.getElementById('loading').style.display = 'block';
@@ -356,12 +251,12 @@
           const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
           document.getElementById('fullname').textContent = profile?.full_name || 'Ученик';
           document.getElementById('emailText').textContent = user.email;
-          document.getElementById('attemptsCount').textContent = `📊 Попыток: ${profile?.attempts || 0}`;
+          document.getElementById('attemptsCount').textContent = `Попыток: ${profile?.attempts || 0}`;
 
           // keys
           const { data: keys } = await supabase.from('keys').select('*').eq('user_id', user.id);
           const got = keys?.length || 0;
-          document.getElementById('keysCount').textContent = `🗝️ Ключей: ${got}/7`;
+          document.getElementById('keysCount').textContent = `Ключей: ${got}/7`;
 
           // fill circles
           document.querySelectorAll('.key-circle').forEach(el => {
@@ -369,12 +264,8 @@
             const found = keys?.some(k => k.month_index === idx);
             if (found) { 
               el.classList.add('filled'); 
-              el.style.background = 'linear-gradient(135deg, #ffb74d, #ff9800)';
-              el.style.boxShadow = '0 6px 20px rgba(255, 152, 0, 0.4), 0 0 20px rgba(255, 193, 7, 0.3)';
             } else { 
-              el.classList.remove('filled');
-              el.style.background = 'linear-gradient(135deg, #8d6e63, #6d4c41)';
-              el.style.boxShadow = '0 4px 12px rgba(109, 76, 65, 0.3)';
+              el.classList.remove('filled'); 
             }
           });
 
@@ -394,33 +285,22 @@
             const isCompleted = hasKey;
             
             let status = '';
-            let emoji = '';
-            let statusColor = '';
-            
             if (isCompleted) {
-              status = 'Задание выполнено';
-              emoji = '🎃';
-              statusColor = '#4caf50';
+              status = '✅ Задание выполнено';
             } else if (hasAttemptForMonth) {
-              status = 'Попытка использована';
-              emoji = '🕸️';
-              statusColor = '#f44336';
+              status = '❌ Попытка использована';
             } else if (isAvailable) {
-              status = 'Доступно для выполнения';
-              emoji = '🍁';
-              statusColor = '#ff9800';
+              status = '🟡 Доступно для выполнения';
             } else {
-              status = 'Заблокировано';
-              emoji = '🔒';
-              statusColor = '#9e9e9e';
+              status = '🔒 Заблокировано';
             }
             
             const li = document.createElement('div');
             li.className = 'month-row';
             li.innerHTML = `
               <div class="month-title">
-                <div><b style="color: #5d4037;">${months[i-1]}</b></div>
-                <div><span class="small-muted" style="color: ${statusColor}; font-weight: 500;">${emoji} ${status}</span></div>
+                <div><b>${months[i-1]}</b></div>
+                <div><span class="small-muted">${status}</span></div>
               </div>
             `;
             monthsContainer.appendChild(li);
@@ -444,19 +324,23 @@
       }
     }
     
-    // Конфигурация должна загружаться мгновенно
-    if (window.SUPABASE_URL) {
-      initApp();
-    } else {
-      // Ждем событие конфигурации (максимум 1 секунду)
-      const timeout = setTimeout(() => {
-        showError('❌ Таймаут загрузки конфигурации');
-      }, 1000);
-      
-      window.addEventListener('configLoaded', () => {
-        clearTimeout(timeout);
+    const configTimeout = setTimeout(() => {
+      if (!window.SUPABASE_URL) {
+        showError('❌ Таймаут загрузки конфигурации. Используем резервные значения...');
+        window.SUPABASE_URL = 'https://dtjhlanmwjpdcdxgzzyo.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY';
         initApp();
-      });
+      }
+    }, 5000);
+    
+    window.addEventListener('configLoaded', () => {
+      clearTimeout(configTimeout);
+      initApp();
+    });
+    
+    if (window.SUPABASE_URL) {
+      clearTimeout(configTimeout);
+      initApp();
     }
   </script>
 </body>
