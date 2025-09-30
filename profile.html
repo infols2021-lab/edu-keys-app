@@ -5,8 +5,6 @@
   <title>Профиль — Edu Keys</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Осенняя тема -->
-  <link rel="stylesheet" href="/assets/seasonal.css">
   <style>
     /* ДИНАМИЧЕСКИЙ ФОН */
     body {
@@ -198,11 +196,11 @@
           <div class="mark" style="background: linear-gradient(135deg, #ff9800, #f57c00);">EK</div>
           <div>
             <h3 style="background: linear-gradient(135deg, #ff9800, #e65100); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0;">Edu Keys</h3>
-            <div class="small-muted">🍂 Осенний учебный профиль</div>
+            <div class="small-muted">🎨 Персонализированный профиль</div>
           </div>
         </div>
         <div class="nav">
-          <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">🍁 К заданиям</button>
+          <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">📚 К заданиям</button>
           <button class="btn secondary" id="logoutBtn" style="background: linear-gradient(135deg, #795548, #5d4037);">🚪 Выйти</button>
         </div>
       </div>
@@ -255,7 +253,7 @@
         <!-- right: progress / months -->
         <div>
           <div class="card">
-            <h3 style="color: #e65100; margin-bottom: 16px;">🍂 Прогресс по месяцам</h3>
+            <h3 style="color: #e65100; margin-bottom: 16px;">📊 Прогресс по месяцам</h3>
             <div id="monthsList" style="margin-top:12px"></div>
           </div>
 
@@ -263,7 +261,7 @@
 
           <div class="card">
             <h3 style="color: #e65100; margin-bottom: 16px;">ℹ️ Информация</h3>
-            <p class="small-muted" style="color: #5d4037; line-height: 1.5;">🎃 Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
+            <p class="small-muted" style="color: #5d4037; line-height: 1.5;">🎯 Кружки на аватаре заполняются по мере получения ключей за каждый месяц. Нажми «К заданиям», чтобы начать.</p>
             <p class="small-muted" style="color: #5d4037; line-height: 1.5;">📅 Задания каждого месяца становятся доступны в соответствующем месяце учебного года (с сентября по март).</p>
             <p class="small-muted" style="color: #5d4037; line-height: 1.5;"><strong>⚠️ Внимание:</strong> Каждая попытка списывается при начале задания. Будьте внимательны!</p>
           </div>
@@ -271,114 +269,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Осенние анимации -->
-  <script>
-    // Простой скрипт для осенних декораций
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🎃 Добавляем осенние декорации...');
-      
-      // Создаем элементы декора
-      const decorations = [
-        // Тыквы
-        { type: 'pumpkin', top: '5%', left: '3%', size: '80px' },
-        { type: 'pumpkin', top: '10%', left: '92%', size: '90px' },
-        { type: 'pumpkin', top: '82%', left: '4%', size: '70px' },
-        { type: 'pumpkin', top: '78%', left: '88%', size: '85px' },
-        
-        // Паутинки
-        { type: 'web', top: '3%', left: '15%', size: '60px' },
-        { type: 'web', top: '8%', left: '70%', size: '55px' },
-        { type: 'web', top: '87%', left: '20%', size: '65px' },
-        
-        // Призраки
-        { type: 'ghost', top: '25%', left: '12%', size: '50px' },
-        { type: 'ghost', top: '35%', left: '82%', size: '45px' },
-        { type: 'ghost', top: '65%', left: '18%', size: '55px' },
-        
-        // Свечи
-        { type: 'candle', top: '15%', left: '25%', size: '30px' },
-        { type: 'candle', top: '20%', left: '60%', size: '25px' },
-        { type: 'candle', top: '70%', left: '30%', size: '35px' }
-      ];
-
-      decorations.forEach((dec, index) => {
-        const element = document.createElement('div');
-        element.className = `autumn-${dec.type}`;
-        element.style.cssText = `
-          position: fixed;
-          width: ${dec.size};
-          height: ${dec.size};
-          top: ${dec.top};
-          left: ${dec.left};
-          background-image: url('/assets/images/${dec.type}.png');
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: center;
-          pointer-events: none;
-          z-index: 1;
-          animation: ${getAnimation(dec.type)} infinite;
-          filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
-        `;
-        
-        document.body.appendChild(element);
-      });
-
-      function getAnimation(type) {
-        const animations = {
-          pumpkin: 'pumpkinFloat 8s ease-in-out infinite',
-          web: 'webSwing 15s ease-in-out infinite',
-          ghost: 'ghostFloat 12s ease-in-out infinite',
-          candle: 'candleFlicker 3s ease-in-out infinite'
-        };
-        return animations[type] || 'pumpkinFloat 8s ease-in-out infinite';
-      }
-
-      // Добавляем CSS анимации
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes pumpkinFloat {
-          0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-          33% { transform: translateY(-20px) rotate(3deg) scale(1.05); }
-          66% { transform: translateY(-10px) rotate(-3deg) scale(0.95); }
-        }
-        
-        @keyframes webSwing {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          25% { transform: rotate(5deg) scale(1.02); }
-          50% { transform: rotate(-3deg) scale(0.98); }
-          75% { transform: rotate(3deg) scale(1.01); }
-        }
-        
-        @keyframes ghostFloat {
-          0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.7; }
-          25% { transform: translateY(-30px) translateX(20px) scale(1.05); opacity: 0.9; }
-          50% { transform: translateY(-15px) translateX(-15px) scale(0.95); opacity: 0.8; }
-          75% { transform: translateY(-35px) translateX(10px) scale(1.03); opacity: 0.85; }
-        }
-        
-        @keyframes candleFlicker {
-          0%, 100% { opacity: 0.8; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-
-        /* Адаптивность для мобильных */
-        @media (max-width: 768px) {
-          .autumn-pumpkin, .autumn-web, .autumn-ghost, .autumn-candle {
-            transform: scale(0.7);
-          }
-          
-          .autumn-pumpkin:nth-child(n+3),
-          .autumn-web:nth-child(n+4),
-          .autumn-ghost:nth-child(n+4),
-          .autumn-candle:nth-child(n+3) {
-            display: none;
-          }
-        }
-      `;
-      document.head.appendChild(style);
-    });
-  </script>
 
   <script type="module">
     document.getElementById('loading').style.display = 'block';
@@ -396,11 +286,12 @@
     }
     
     // ===== ЗАГРУЗКА ФОНА ПРОФИЛЯ =====
-    async function loadProfileBackground() {
+    async function loadProfileBackground(supabase) {
       const backgroundLoading = document.getElementById('backgroundLoading');
       
       try {
         backgroundLoading.style.display = 'block';
+        console.log('🔄 Начинаем загрузку фона профиля...');
         
         const { data: background, error } = await supabase
           .from('backgrounds')
@@ -410,27 +301,36 @@
           .limit(1)
           .single();
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Ошибка загрузки фона:', error);
-          // Используем фон по умолчанию
-          setDefaultBackground();
+        console.log('📋 Результат запроса фона:', { background, error });
+
+        if (error) {
+          // Если нет активного фона или другая ошибка
+          if (error.code === 'PGRST116') {
+            console.log('ℹ️ Активный фон не найден, используем фон по умолчанию');
+            setDefaultBackground();
+          } else {
+            console.error('❌ Ошибка загрузки фона:', error);
+            setDefaultBackground();
+          }
+          backgroundLoading.style.display = 'none';
           return;
         }
 
-        if (background) {
+        if (background && background.image_url) {
+          console.log('✅ Найден активный фон:', background.file_name);
+          
           // Создаем изображение для предварительной загрузки
           const img = new Image();
           img.onload = function() {
+            console.log('🖼️ Фон успешно загружен в память');
             // Устанавливаем фон для body после загрузки изображения
             document.body.style.backgroundImage = `url('${background.image_url}')`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundAttachment = 'fixed';
+            document.body.style.backgroundRepeat = 'no-repeat';
             
-            // Для GIF добавляем дополнительные стили
-            if (background.mime_type === 'image/gif') {
-              document.body.style.backgroundSize = 'cover';
-              document.body.style.backgroundAttachment = 'fixed';
-            }
-            
-            console.log('✅ Фон профиля загружен:', background.file_name);
+            console.log('✅ Фон профиля установлен:', background.file_name);
             backgroundLoading.style.display = 'none';
           };
           
@@ -440,14 +340,16 @@
             backgroundLoading.style.display = 'none';
           };
           
+          console.log('📥 Загружаем изображение по URL:', background.image_url);
           img.src = background.image_url;
         } else {
           // Фон по умолчанию, если нет активного
+          console.log('ℹ️ Активный фон не найден, используем фон по умолчанию');
           setDefaultBackground();
           backgroundLoading.style.display = 'none';
         }
       } catch (error) {
-        console.error('Ошибка загрузки фона профиля:', error);
+        console.error('❌ Ошибка загрузки фона профиля:', error);
         // В случае ошибки используем фон по умолчанию
         setDefaultBackground();
         backgroundLoading.style.display = 'none';
@@ -456,7 +358,11 @@
 
     function setDefaultBackground() {
       document.body.style.backgroundImage = "url('/assets/autumg-bg.jpg')";
-      console.log('ℹ️ Используется фон по умолчанию');
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundAttachment = 'fixed';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      console.log('🎨 Установлен фон по умолчанию');
     }
     
     async function initApp() {
@@ -537,15 +443,15 @@
             
             if (isCompleted) {
               status = 'Задание выполнено';
-              emoji = '🎃';
+              emoji = '✅';
               statusColor = '#4caf50';
             } else if (hasAttemptForMonth) {
               status = 'Попытка использована';
-              emoji = '🕸️';
+              emoji = '❌';
               statusColor = '#f44336';
             } else if (isAvailable) {
               status = 'Доступно для выполнения';
-              emoji = '🍁';
+              emoji = '📝';
               statusColor = '#ff9800';
             } else {
               status = 'Заблокировано';
@@ -573,7 +479,7 @@
         });
 
         // Загружаем фон ДО показа контента
-        await loadProfileBackground();
+        await loadProfileBackground(supabase);
         
         await loadProfile();
         showContent();
