@@ -55,6 +55,9 @@
       border-color: var(--accent2);
       outline: none;
     }
+    .register-card input.error {
+      border-color: #e74c3c;
+    }
     .btn {
       background: var(--accent2);
       color: #fff;
@@ -91,14 +94,14 @@
     .link a:hover {
       text-decoration: underline;
     }
-    .error, .success, .warning {
+    .error-message, .success, .warning {
       padding: 12px;
       border-radius: 8px;
       margin: 15px 0;
       display: none;
       font-size: 14px;
     }
-    .error {
+    .error-message {
       background: #ffebee;
       color: #c62828;
       border: 1px solid #ffcdd2;
@@ -167,6 +170,15 @@
       font-size: 13px;
       text-align: left;
     }
+    .existing-account-help {
+      background: #e8f5e8;
+      border: 1px solid #c8e6c9;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 13px;
+      text-align: left;
+    }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -211,7 +223,7 @@
         <p>Загружаем конфигурацию...</p>
       </div>
       
-      <div id="errorMessage" class="error"></div>
+      <div id="errorMessage" class="error-message"></div>
       <div id="successMessage" class="success"></div>
       <div id="warningMessage" class="warning"></div>
       
@@ -302,6 +314,9 @@
       document.getElementById('successMessage').style.display = 'none';
       document.getElementById('warningMessage').style.display = 'none';
       document.getElementById('loading').style.display = 'none';
+      
+      // Добавляем класс error к полю email
+      document.getElementById('email').classList.add('error');
     }
     
     function showSuccess(message) {
@@ -378,11 +393,42 @@
       }
     }
 
+    // Функция проверки существования email
+    async function checkEmailExists(supabase, email) {
+      try {
+        // Проверяем через Supabase Auth, существует ли пользователь
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: 'dummy_password_for_check' // Фиктивный пароль для проверки
+        });
+
+        // Если ошибка связана с неверным паролем - значит пользователь существует
+        if (error && error.message.includes('Invalid login credentials')) {
+          return true;
+        }
+        
+        // Если ошибка связана с неподтвержденным email - тоже значит пользователь существует
+        if (error && error.message.includes('Email not confirmed')) {
+          return true;
+        }
+
+        // Если нет ошибки или ошибка другого типа - считаем что пользователь не существует
+        return false;
+      } catch (error) {
+        console.warn('Email check failed:', error);
+        return false; // В случае ошибки разрешаем регистрацию
+      }
+    }
+
     // Функция обновления визуальной валидации
     function updateValidation() {
       const email = document.getElementById('email').value.trim();
       const confirmEmail = document.getElementById('confirmEmail').value.trim();
       const password = document.getElementById('password').value;
+      
+      // Сбрасываем стиль ошибки при изменении email
+      document.getElementById('email').classList.remove('error');
+      document.getElementById('errorMessage').style.display = 'none';
       
       // Валидация формата email
       const formatValid = validateEmail(email);
@@ -475,17 +521,22 @@
 
             try {
               document.getElementById('registerBtn').disabled = true;
-              document.getElementById('registerBtn').textContent = 'Проверяем данные...';
+              document.getElementById('registerBtn').textContent = 'Проверяем email...';
               
-              showWarning('🔍 Проверяем ваши данные...');
+              showWarning('🔍 Проверяем доступность email...');
 
-              // Даем небольшую задержку для UX
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              // Проверяем, не зарегистрирован ли уже этот email
+              const emailExists = await checkEmailExists(supabase, email);
+              if (emailExists) {
+                showError('❌ Пользователь с таким email уже зарегистрирован. Используйте другой email или войдите в существующий аккаунт.');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('registerBtn').textContent = 'Создать аккаунт';
+                return;
+              }
 
               showWarning('🔄 Создаем аккаунт...');
 
               // Регистрируем пользователя с обязательным подтверждением email
-              // ВАЖНО: используем правильный redirect URL
               const redirectUrl = `${window.location.origin}/login.html`;
               console.log('Redirect URL:', redirectUrl);
 
@@ -501,8 +552,11 @@
               });
 
               if (error) {
-                if (error.message.includes('already registered')) {
-                  showError('❌ Этот email уже зарегистрирован. Используйте другой email или восстановите пароль.');
+                // Обрабатываем различные ошибки Supabase
+                if (error.message.includes('already registered') || 
+                    error.message.includes('already exists') || 
+                    error.message.includes('user already exists')) {
+                  showError('❌ Пользователь с таким email уже зарегистрирован. Используйте другой email или войдите в существующий аккаунт.');
                 } else if (error.message.includes('rate limit')) {
                   showError('❌ Слишком много попыток регистрации. Попробуйте через час.');
                 } else if (error.message.includes('email sending is disabled')) {
@@ -518,6 +572,17 @@
               if (data.user) {
                 showSuccess('✅ Регистрация успешна! Проверьте вашу почту для подтверждения email. Без подтверждения вход невозможен.');
                 document.getElementById('registerBtn').style.display = 'none';
+                
+                // Добавляем блок с информацией о существующем аккаунте
+                const helpDiv = document.createElement('div');
+                helpDiv.className = 'existing-account-help';
+                helpDiv.innerHTML = `
+                  <strong>📧 Что делать дальше?</strong><br>
+                  • Проверьте папку "Входящие" и "Спам" в вашей почте<br>
+                  • Нажмите на ссылку подтверждения в письме<br>
+                  • После подтверждения войдите в систему
+                `;
+                document.getElementById('registerForm').appendChild(helpDiv);
                 
                 // Очищаем форму
                 document.getElementById('fullname').value = '';

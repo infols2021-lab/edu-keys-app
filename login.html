@@ -128,6 +128,15 @@
       animation: spin 1s linear infinite;
       margin: 0 auto 10px;
     }
+    .existing-account-help {
+      background: #e8f5e8;
+      border: 1px solid #c8e6c9;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 13px;
+      text-align: left;
+    }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -300,8 +309,19 @@
       
       if (message === 'confirmed') {
         showSuccess('✅ Email успешно подтвержден! Теперь вы можете войти в систему.');
+        
+        // Добавляем блок помощи
+        const helpDiv = document.createElement('div');
+        helpDiv.className = 'existing-account-help';
+        helpDiv.innerHTML = `
+          <strong>🎉 Отлично! Ваш аккаунт активирован.</strong><br>
+          Теперь вы можете войти в систему используя ваш email и пароль.
+        `;
+        document.getElementById('loginForm').insertBefore(helpDiv, document.getElementById('loginForm').firstChild);
       } else if (message === 'check_email') {
         showWarning('📧 Проверьте вашу почту для подтверждения регистрации.');
+      } else if (message === 'email_exists') {
+        showError('❌ Пользователь с таким email уже зарегистрирован. Войдите в существующий аккаунт или используйте другой email.');
       }
       
       import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm')
@@ -385,7 +405,7 @@
         
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
-            showError('❌ Неверный email или пароль');
+            showError('❌ Неверный email или пароль. Если вы забыли пароль, воспользуйтесь восстановлением.');
           } else if (error.message.includes('Email not confirmed')) {
             showError('❌ Email не подтвержден. Проверьте вашу почту и подтвердите регистрацию.');
             
