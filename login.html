@@ -404,9 +404,12 @@
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
+          // Улучшенная обработка ошибок входа
+          console.error('Login error details:', error);
+          
+          if (error.message?.includes('Invalid login credentials') || error.code === 'invalid_credentials') {
             showError('❌ Неверный email или пароль. Если вы забыли пароль, воспользуйтесь восстановлением.');
-          } else if (error.message.includes('Email not confirmed')) {
+          } else if (error.message?.includes('Email not confirmed') || error.code === 'email_not_confirmed') {
             showError('❌ Email не подтвержден. Проверьте вашу почту и подтвердите регистрацию.');
             
             const resend = confirm('Отправить письмо с подтверждением повторно?');
@@ -420,11 +423,14 @@
                 showSuccess('📧 Письмо с подтверждением отправлено повторно. Проверьте вашу почту.');
               }
             }
-          } else if (error.message.includes('rate limit')) {
+          } else if (error.message?.includes('rate limit') || error.code === 'rate_limit_exceeded') {
             showError('⚠️ Слишком много попыток. Попробуйте через несколько минут.');
+          } else if (error.message?.includes('User not found')) {
+            showError('❌ Пользователь с таким email не найден. Проверьте email или зарегистрируйтесь.');
           } else {
-            throw error;
+            showError('❌ Ошибка входа: ' + (error.message || 'Неизвестная ошибка'));
           }
+          
           document.getElementById('loginBtn').disabled = false;
           document.getElementById('adminLoginBtn').disabled = false;
           return;
@@ -439,6 +445,7 @@
           return;
         }
 
+        // Успешный вход
         if (isAdmin) {
           const { data: profile } = await supabase
             .from('profiles')
@@ -458,8 +465,8 @@
           window.location.href = "/profile.html";
         }
       } catch (error) {
-        console.error('Login error:', error);
-        showError('Ошибка входа: ' + error.message);
+        console.error('Unexpected login error:', error);
+        showError('❌ Неожиданная ошибка: ' + error.message);
         document.getElementById('loginBtn').disabled = false;
         document.getElementById('adminLoginBtn').disabled = false;
       }

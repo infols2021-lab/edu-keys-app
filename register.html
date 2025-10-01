@@ -393,33 +393,6 @@
       }
     }
 
-    // Функция проверки существования email
-    async function checkEmailExists(supabase, email) {
-      try {
-        // Проверяем через Supabase Auth, существует ли пользователь
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: 'dummy_password_for_check' // Фиктивный пароль для проверки
-        });
-
-        // Если ошибка связана с неверным паролем - значит пользователь существует
-        if (error && error.message.includes('Invalid login credentials')) {
-          return true;
-        }
-        
-        // Если ошибка связана с неподтвержденным email - тоже значит пользователь существует
-        if (error && error.message.includes('Email not confirmed')) {
-          return true;
-        }
-
-        // Если нет ошибки или ошибка другого типа - считаем что пользователь не существует
-        return false;
-      } catch (error) {
-        console.warn('Email check failed:', error);
-        return false; // В случае ошибки разрешаем регистрацию
-      }
-    }
-
     // Функция обновления визуальной валидации
     function updateValidation() {
       const email = document.getElementById('email').value.trim();
@@ -521,22 +494,11 @@
 
             try {
               document.getElementById('registerBtn').disabled = true;
-              document.getElementById('registerBtn').textContent = 'Проверяем email...';
+              document.getElementById('registerBtn').textContent = 'Создаем аккаунт...';
               
-              showWarning('🔍 Проверяем доступность email...');
+              showWarning('🔄 Создаем ваш аккаунт...');
 
-              // Проверяем, не зарегистрирован ли уже этот email
-              const emailExists = await checkEmailExists(supabase, email);
-              if (emailExists) {
-                showError('❌ Пользователь с таким email уже зарегистрирован. Используйте другой email или войдите в существующий аккаунт.');
-                document.getElementById('registerBtn').disabled = false;
-                document.getElementById('registerBtn').textContent = 'Создать аккаунт';
-                return;
-              }
-
-              showWarning('🔄 Создаем аккаунт...');
-
-              // Регистрируем пользователя с обязательным подтверждением email
+              // Прямая регистрация без предварительной проверки существования
               const redirectUrl = `${window.location.origin}/login.html`;
               console.log('Redirect URL:', redirectUrl);
 
@@ -552,28 +514,40 @@
               });
 
               if (error) {
-                // Обрабатываем различные ошибки Supabase
-                if (error.message.includes('already registered') || 
-                    error.message.includes('already exists') || 
-                    error.message.includes('user already exists')) {
+                console.error('Registration error details:', error);
+                
+                // Улучшенная обработка ошибок
+                if (error.message?.includes('already registered') || 
+                    error.message?.includes('already exists') || 
+                    error.message?.includes('user already exists') ||
+                    error.code === 'user_already_exists' ||
+                    error.status === 400) {
                   showError('❌ Пользователь с таким email уже зарегистрирован. Используйте другой email или войдите в существующий аккаунт.');
-                } else if (error.message.includes('rate limit')) {
+                } else if (error.message?.includes('rate limit') || error.code === 'rate_limit_exceeded') {
                   showError('❌ Слишком много попыток регистрации. Попробуйте через час.');
-                } else if (error.message.includes('email sending is disabled')) {
+                } else if (error.message?.includes('email sending is disabled')) {
                   showError('❌ Временно недоступна отправка email. Попробуйте позже или свяжитесь с администратором.');
+                } else if (error.message?.includes('Invalid email')) {
+                  showError('❌ Неверный формат email адреса.');
+                } else if (error.message?.includes('Password should be at least')) {
+                  showError('❌ Пароль слишком короткий. Минимум 6 символов.');
                 } else {
-                  throw error;
+                  showError('❌ Ошибка регистрации: ' + (error.message || 'Неизвестная ошибка'));
                 }
+                
                 document.getElementById('registerBtn').disabled = false;
                 document.getElementById('registerBtn').textContent = 'Создать аккаунт';
                 return;
               }
 
+              // УСПЕШНАЯ РЕГИСТРАЦИЯ
               if (data.user) {
+                console.log('User created successfully:', data.user.id);
+                
                 showSuccess('✅ Регистрация успешна! Проверьте вашу почту для подтверждения email. Без подтверждения вход невозможен.');
                 document.getElementById('registerBtn').style.display = 'none';
                 
-                // Добавляем блок с информацией о существующем аккаунте
+                // Добавляем блок с информацией
                 const helpDiv = document.createElement('div');
                 helpDiv.className = 'existing-account-help';
                 helpDiv.innerHTML = `
@@ -594,10 +568,15 @@
                 setTimeout(() => {
                   window.location.href = '/login.html?message=check_email';
                 }, 8000);
+              } else {
+                // Это не должно происходить, но на всякий случай
+                showError('❌ Неизвестная ошибка при создании пользователя');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('registerBtn').textContent = 'Создать аккаунт';
               }
             } catch (error) {
-              console.error('Registration error:', error);
-              showError('❌ Ошибка регистрации: ' + error.message);
+              console.error('Unexpected registration error:', error);
+              showError('❌ Неожиданная ошибка: ' + error.message);
               document.getElementById('registerBtn').disabled = false;
               document.getElementById('registerBtn').textContent = 'Создать аккаунт';
             }
