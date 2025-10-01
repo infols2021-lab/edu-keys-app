@@ -158,6 +158,15 @@
       margin: 10px 0;
       font-size: 13px;
     }
+    .info-box {
+      background: #e3f2fd;
+      border: 1px solid #bbdefb;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 13px;
+      text-align: left;
+    }
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -207,6 +216,10 @@
       <div id="warningMessage" class="warning"></div>
       
       <div id="registerForm" style="display: none;">
+        <div class="info-box">
+          ✅ <strong>Подтверждение email обязательно!</strong> Без подтверждения вход в систему невозможен.
+        </div>
+
         <div class="rate-limit">
           ⚠️ <strong>Защита от спама:</strong> Максимум 3 регистрации в час с одного устройства
         </div>
@@ -255,11 +268,13 @@
   </div>
 
   <script type="module">
-    // Строгий список разрешенных почтовых доменов
+    // Расширенный список разрешенных почтовых доменов
     const ALLOWED_DOMAINS = [
       'gmail.com', 'yandex.ru', 'mail.ru', 'ya.ru', 'yandex.com',
       'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com',
-      'icloud.com', 'me.com', 'mac.com'
+      'icloud.com', 'me.com', 'mac.com', 'rambler.ru', 'bk.ru',
+      'list.ru', 'inbox.ru', 'yandex.ua', 'mail.ua', 'ukr.net',
+      'i.ua', 'meta.ua', 'email.ua'
     ];
 
     // Расширенный список запрещенных (временных) доменов
@@ -327,7 +342,7 @@
       if (!ALLOWED_DOMAINS.includes(domain)) {
         return { 
           valid: false, 
-          message: `Разрешены только email от: ${ALLOWED_DOMAINS.join(', ')}` 
+          message: `Разрешены только email от популярных сервисов: Gmail, Yandex, Mail.ru, Outlook, Yahoo и др.` 
         };
       }
       
@@ -360,27 +375,6 @@
       } catch (e) {
         console.warn('Rate limit check failed:', e);
         return { allowed: true }; // В случае ошибки разрешаем регистрацию
-      }
-    }
-
-    // Функция DNS проверки домена (упрощенная)
-    async function checkDomainExists(email) {
-      const domain = email.split('@')[1];
-      if (!domain) return false;
-      
-      try {
-        // Создаем изображение для проверки доступности домена
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve(true);
-          img.onerror = () => resolve(false);
-          img.src = `https://${domain}/favicon.ico?t=${Date.now()}`;
-          
-          // Таймаут 3 секунды
-          setTimeout(() => resolve(false), 3000);
-        });
-      } catch (e) {
-        return true; // В случае ошибки разрешаем регистрацию
       }
     }
 
@@ -485,14 +479,8 @@
               
               showWarning('🔍 Проверяем ваши данные...');
 
-              // Дополнительная проверка домена
-              const domainExists = await checkDomainExists(email);
-              if (!domainExists) {
-                showError('❌ Не удалось проверить домен email. Убедитесь, что email существует.');
-                document.getElementById('registerBtn').disabled = false;
-                document.getElementById('registerBtn').textContent = 'Создать аккаунт';
-                return;
-              }
+              // Даем небольшую задержку для UX
+              await new Promise(resolve => setTimeout(resolve, 1000));
 
               showWarning('🔄 Создаем аккаунт...');
 
@@ -510,9 +498,11 @@
 
               if (error) {
                 if (error.message.includes('already registered')) {
-                  showError('Этот email уже зарегистрирован. Используйте другой email или восстановите пароль.');
+                  showError('❌ Этот email уже зарегистрирован. Используйте другой email или восстановите пароль.');
                 } else if (error.message.includes('rate limit')) {
-                  showError('Слишком много попыток регистрации. Попробуйте через час.');
+                  showError('❌ Слишком много попыток регистрации. Попробуйте через час.');
+                } else if (error.message.includes('email sending is disabled')) {
+                  showError('❌ Временно недоступна отправка email. Попробуйте позже или свяжитесь с администратором.');
                 } else {
                   throw error;
                 }
@@ -538,7 +528,7 @@
               }
             } catch (error) {
               console.error('Registration error:', error);
-              showError('Ошибка регистрации: ' + error.message);
+              showError('❌ Ошибка регистрации: ' + error.message);
               document.getElementById('registerBtn').disabled = false;
               document.getElementById('registerBtn').textContent = 'Создать аккаунт';
             }
