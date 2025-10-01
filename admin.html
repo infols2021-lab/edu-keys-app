@@ -645,6 +645,11 @@
       return div.innerHTML;
     }
 
+    // Генератор уникальных ID для вопросов
+    function generateQuestionId() {
+      return 'q_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
     async function initApp() {
       if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
         showError('❌ Ошибка конфигурации. Переменные Supabase не загружены.');
@@ -662,7 +667,6 @@
         const currentUser = adminCheck.user;
         let editingTaskId = null;
         let currentQuestionType = 'mcq';
-        let questionCounter = 0;
         let searchTimeout = null;
 
         // ===== ОБРАБОТЧИКИ СОБЫТИЙ =====
@@ -725,7 +729,7 @@
         });
         
         // Функция загрузки изображения в Supabase Storage
-        async function uploadQuestionImage(file, questionIndex) {
+        async function uploadQuestionImage(file, questionId) {
           try {
             const fileExt = file.name.split('.').pop();
             const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
@@ -1308,7 +1312,6 @@
           document.getElementById('taskTimeLimit').value = '60';
           document.getElementById('taskPassingScore').value = '80';
           editingTaskId = null;
-          questionCounter = 0;
           
           currentQuestionType = 'mcq';
           document.querySelectorAll('.type-btn').forEach(btn => {
@@ -1328,11 +1331,11 @@
           document.getElementById('taskFormCard').style.display = 'none';
         }
         
-        function setupUploadArea(questionIndex) {
-          const uploadArea = document.getElementById(`uploadArea${questionIndex}`);
+        function setupUploadArea(questionId) {
+          const uploadArea = document.getElementById(`uploadArea${questionId}`);
           if (!uploadArea) return;
           
-          const imageInput = document.getElementById(`imageInput${questionIndex}`);
+          const imageInput = document.getElementById(`imageInput${questionId}`);
           
           uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -1350,12 +1353,12 @@
             const files = e.dataTransfer.files;
             if (files.length > 0) {
               imageInput.files = files;
-              handleImageUpload(imageInput, questionIndex);
+              handleImageUpload(imageInput, questionId);
             }
           });
         }
         
-        function handleImageUpload(input, questionIndex) {
+        function handleImageUpload(input, questionId) {
           const file = input.files[0];
           if (!file) return;
           
@@ -1369,18 +1372,18 @@
             return;
           }
           
-          const progress = document.getElementById(`progress${questionIndex}`);
-          const progressBar = document.getElementById(`progressBar${questionIndex}`);
-          const preview = document.getElementById(`imagePreview${questionIndex}`);
-          const removeBtn = document.getElementById(`removeBtn${questionIndex}`);
-          const uploadArea = document.getElementById(`uploadArea${questionIndex}`);
+          const progress = document.getElementById(`progress${questionId}`);
+          const progressBar = document.getElementById(`progressBar${questionId}`);
+          const preview = document.getElementById(`imagePreview${questionId}`);
+          const removeBtn = document.getElementById(`removeBtn${questionId}`);
+          const uploadArea = document.getElementById(`uploadArea${questionId}`);
           
           progress.style.display = 'block';
           progressBar.style.width = '0%';
           
-          uploadQuestionImage(file, questionIndex)
+          uploadQuestionImage(file, questionId)
             .then(imageUrl => {
-              document.getElementById(`imageUrl${questionIndex}`).value = imageUrl;
+              document.getElementById(`imageUrl${questionId}`).value = imageUrl;
               
               preview.src = imageUrl;
               preview.style.display = 'block';
@@ -1398,12 +1401,12 @@
             });
         }
         
-        function removeImage(questionIndex) {
-          const preview = document.getElementById(`imagePreview${questionIndex}`);
-          const removeBtn = document.getElementById(`removeBtn${questionIndex}`);
-          const uploadArea = document.getElementById(`uploadArea${questionIndex}`);
-          const imageUrlInput = document.getElementById(`imageUrl${questionIndex}`);
-          const imageInput = document.getElementById(`imageInput${questionIndex}`);
+        function removeImage(questionId) {
+          const preview = document.getElementById(`imagePreview${questionId}`);
+          const removeBtn = document.getElementById(`removeBtn${questionId}`);
+          const uploadArea = document.getElementById(`uploadArea${questionId}`);
+          const imageUrlInput = document.getElementById(`imageUrl${questionId}`);
+          const imageInput = document.getElementById(`imageInput${questionId}`);
           
           preview.style.display = 'none';
           removeBtn.style.display = 'none';
@@ -1451,11 +1454,12 @@
         function addQuestion(type = null) {
           const questionsContainer = document.getElementById('questionsContainer');
           const questionType = type || currentQuestionType;
-          questionCounter++;
+          const questionId = generateQuestionId(); // Генерируем уникальный ID для вопроса
           
           const newQuestion = document.createElement('div');
           newQuestion.className = 'subtask-item';
           newQuestion.setAttribute('data-type', questionType);
+          newQuestion.setAttribute('data-id', questionId); // Сохраняем ID в атрибуте
           
           if (questionType === 'mcq') {
             newQuestion.innerHTML = `
@@ -1465,17 +1469,17 @@
               </div>
               <div class="form-group">
                 <label>Изображение для вопроса (опционально):</label>
-                <div class="upload-area" id="uploadArea${questionCounter}">
+                <div class="upload-area" id="uploadArea${questionId}">
                   <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
                   <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                  <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*">
+                  <input type="file" id="imageInput${questionId}" style="display:none" accept="image/*">
                 </div>
-                <div class="upload-progress" id="progress${questionCounter}">
-                  <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                <div class="upload-progress" id="progress${questionId}">
+                  <div class="upload-progress-bar" id="progressBar${questionId}"></div>
                 </div>
-                <input type="hidden" class="input question-image" id="imageUrl${questionCounter}">
-                <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения">
-                <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionCounter}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
+                <input type="hidden" class="input question-image" id="imageUrl${questionId}">
+                <img class="image-preview" id="imagePreview${questionId}" alt="Предпросмотр изображения">
+                <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
               </div>
               <div class="form-group">
                 <label>Варианты ответов (каждый с новой строки):</label>
@@ -1495,17 +1499,17 @@
               </div>
               <div class="form-group">
                 <label>Изображение для вопроса (опционально):</label>
-                <div class="upload-area" id="uploadArea${questionCounter}">
+                <div class="upload-area" id="uploadArea${questionId}">
                   <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
                   <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                  <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*">
+                  <input type="file" id="imageInput${questionId}" style="display:none" accept="image/*">
                 </div>
-                <div class="upload-progress" id="progress${questionCounter}">
-                  <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                <div class="upload-progress" id="progress${questionId}">
+                  <div class="upload-progress-bar" id="progressBar${questionId}"></div>
                 </div>
-                <input type="hidden" class="input question-image" id="imageUrl${questionCounter}">
-                <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения">
-                <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionCounter}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
+                <input type="hidden" class="input question-image" id="imageUrl${questionId}">
+                <img class="image-preview" id="imagePreview${questionId}" alt="Предпросмотр изображения">
+                <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
               </div>
               <div class="form-group">
                 <label>Поля для ввода ответов (каждое поле — отдельный правильный ответ):</label>
@@ -1524,14 +1528,14 @@
           
           questionsContainer.appendChild(newQuestion);
           
-          const uploadArea = document.getElementById(`uploadArea${questionCounter}`);
-          const imageInput = document.getElementById(`imageInput${questionCounter}`);
-          const removeBtn = document.getElementById(`removeBtn${questionCounter}`);
+          const uploadArea = document.getElementById(`uploadArea${questionId}`);
+          const imageInput = document.getElementById(`imageInput${questionId}`);
+          const removeBtn = document.getElementById(`removeBtn${questionId}`);
           const removeQuestionBtn = newQuestion.querySelector('.remove-question');
           
           uploadArea.addEventListener('click', () => imageInput.click());
-          imageInput.addEventListener('change', () => handleImageUpload(imageInput, questionCounter));
-          removeBtn.addEventListener('click', () => removeImage(questionCounter));
+          imageInput.addEventListener('change', () => handleImageUpload(imageInput, questionId));
+          removeBtn.addEventListener('click', () => removeImage(questionId));
           removeQuestionBtn.addEventListener('click', function() {
             if (document.querySelectorAll('.subtask-item').length > 1) {
               newQuestion.remove();
@@ -1561,7 +1565,7 @@
             });
           });
           
-          setupUploadArea(questionCounter);
+          setupUploadArea(questionId);
         }
         
         async function editTask(taskId) {
@@ -1583,17 +1587,17 @@
           document.getElementById('taskTimeLimit').value = task.time_limit || 60;
           document.getElementById('taskPassingScore').value = task.passing_score;
           editingTaskId = taskId;
-          questionCounter = 0;
           
           const questionsContainer = document.getElementById('questionsContainer');
           questionsContainer.innerHTML = '';
           
           const questions = task.content?.questions || [];
           questions.forEach((q, i) => {
-            questionCounter++;
+            const questionId = generateQuestionId(); // Генерируем уникальный ID для каждого вопроса
             const questionDiv = document.createElement('div');
             questionDiv.className = 'subtask-item';
             questionDiv.setAttribute('data-type', q.type || 'mcq');
+            questionDiv.setAttribute('data-id', questionId);
             
             if (q.type === 'fill') {
               const answers = Array.isArray(q.answers) ? q.answers : [q.answer || ''];
@@ -1611,17 +1615,17 @@
                 </div>
                 <div class="form-group">
                   <label>Изображение для вопроса (опционально):</label>
-                  <div class="upload-area" id="uploadArea${questionCounter}" style="${q.image ? 'display:none' : ''}">
+                  <div class="upload-area" id="uploadArea${questionId}" style="${q.image ? 'display:none' : ''}">
                     <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
                     <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                    <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*">
+                    <input type="file" id="imageInput${questionId}" style="display:none" accept="image/*">
                   </div>
-                  <div class="upload-progress" id="progress${questionCounter}">
-                    <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                  <div class="upload-progress" id="progress${questionId}">
+                    <div class="upload-progress-bar" id="progressBar${questionId}"></div>
                   </div>
-                  <input type="hidden" class="input question-image" id="imageUrl${questionCounter}" value="${q.image || ''}">
-                  <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
-                  <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionCounter}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
+                  <input type="hidden" class="input question-image" id="imageUrl${questionId}" value="${q.image || ''}">
+                  <img class="image-preview" id="imagePreview${questionId}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
+                  <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
                 </div>
                 <div class="form-group">
                   <label>Поля для ввода ответов (каждое поле — отдельный правильный ответ):</label>
@@ -1641,17 +1645,17 @@
                 </div>
                 <div class="form-group">
                   <label>Изображение для вопроса (опционально):</label>
-                  <div class="upload-area" id="uploadArea${questionCounter}" style="${q.image ? 'display:none' : ''}">
+                  <div class="upload-area" id="uploadArea${questionId}" style="${q.image ? 'display:none' : ''}">
                     <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
                     <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
-                    <input type="file" id="imageInput${questionCounter}" style="display:none" accept="image/*">
+                    <input type="file" id="imageInput${questionId}" style="display:none" accept="image/*">
                   </div>
-                  <div class="upload-progress" id="progress${questionCounter}">
-                    <div class="upload-progress-bar" id="progressBar${questionCounter}"></div>
+                  <div class="upload-progress" id="progress${questionId}">
+                    <div class="upload-progress-bar" id="progressBar${questionId}"></div>
                   </div>
-                  <input type="hidden" class="input question-image" id="imageUrl${questionCounter}" value="${q.image || ''}">
-                  <img class="image-preview" id="imagePreview${questionCounter}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
-                  <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionCounter}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
+                  <input type="hidden" class="input question-image" id="imageUrl${questionId}" value="${q.image || ''}">
+                  <img class="image-preview" id="imagePreview${questionId}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
+                  <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
                 </div>
                 <div class="form-group">
                   <label>Варианты ответов (каждый с новой строки):</label>
@@ -1667,17 +1671,17 @@
             
             questionsContainer.appendChild(questionDiv);
             
-            const uploadArea = document.getElementById(`uploadArea${questionCounter}`);
-            const imageInput = document.getElementById(`imageInput${questionCounter}`);
-            const removeBtn = document.getElementById(`removeBtn${questionCounter}`);
+            const uploadArea = document.getElementById(`uploadArea${questionId}`);
+            const imageInput = document.getElementById(`imageInput${questionId}`);
+            const removeBtn = document.getElementById(`removeBtn${questionId}`);
             const removeQuestionBtn = questionDiv.querySelector('.remove-question');
             
             if (uploadArea) {
               uploadArea.addEventListener('click', () => imageInput.click());
-              imageInput.addEventListener('change', () => handleImageUpload(imageInput, questionCounter));
+              imageInput.addEventListener('change', () => handleImageUpload(imageInput, questionId));
             }
             if (removeBtn) {
-              removeBtn.addEventListener('click', () => removeImage(questionCounter));
+              removeBtn.addEventListener('click', () => removeImage(questionId));
             }
             removeQuestionBtn.addEventListener('click', function() {
               if (document.querySelectorAll('.subtask-item').length > 1) {
@@ -1708,7 +1712,7 @@
               });
             });
             
-            setupUploadArea(questionCounter);
+            setupUploadArea(questionId);
           });
         }
         
@@ -1735,7 +1739,9 @@
             const item = questionElements[i];
             const questionType = item.getAttribute('data-type') || 'mcq';
             const question = item.querySelector('.question-text').value;
-            const imageUrl = document.getElementById(`imageUrl${i + 1}`)?.value || '';
+            // Получаем imageUrl по уникальному ID вопроса
+            const questionId = item.getAttribute('data-id');
+            const imageUrl = document.getElementById(`imageUrl${questionId}`)?.value || '';
             
             if (!question) {
               alert('Заполните текст вопроса');
