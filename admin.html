@@ -121,22 +121,26 @@
       font-weight: bold;
     }
 
-    /* Новые стили для множественных ответов */
-    .fill-answers-container {
+    /* Новые стили для полей ввода в fill-вопросах */
+    .fill-inputs-container {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin: 10px 0;
     }
-    .fill-answer-item {
+    .fill-input-item {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       align-items: center;
     }
-    .fill-answer-item input {
+    .fill-input-item input {
       flex: 1;
+      padding: 8px 12px;
+      border: 2px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      font-size: 14px;
     }
-    .remove-answer-btn {
+    .remove-input-btn {
       background: #e74c3c;
       color: white;
       border: none;
@@ -144,8 +148,13 @@
       padding: 6px 10px;
       cursor: pointer;
       font-size: 12px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .add-answer-btn {
+    .add-input-btn {
       background: var(--accent2);
       color: white;
       border: none;
@@ -153,6 +162,11 @@
       padding: 8px 12px;
       cursor: pointer;
       font-size: 14px;
+      margin-top: 5px;
+    }
+    .input-count {
+      font-size: 12px;
+      color: #666;
       margin-top: 5px;
     }
 
@@ -192,7 +206,7 @@
         min-width: auto;
       }
 
-      .fill-answer-item {
+      .fill-input-item {
         flex-direction: column;
         gap: 5px;
       }
@@ -598,7 +612,7 @@
       document.getElementById('modal').style.display = 'flex';
     }
 
-    // Функция проверки прав администратора - ДОЛЖНА БЫТЬ ОПРЕДЕЛЕНА ДО initApp
+    // Функция проверки прав администратора
     async function checkAdmin(supabase) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -647,7 +661,7 @@
         
         const currentUser = adminCheck.user;
         let editingTaskId = null;
-        let currentQuestionType = 'mcq'; // ИСПРАВЛЕНО: правильная инициализация
+        let currentQuestionType = 'mcq';
         let questionCounter = 0;
         let searchTimeout = null;
 
@@ -679,18 +693,16 @@
         document.getElementById('cancelTaskBtn').addEventListener('click', hideTaskForm);
         document.getElementById('saveTaskBtn').addEventListener('click', saveTask);
         
-        // ИСПРАВЛЕНО: правильный обработчик для добавления вопроса
         document.getElementById('addQuestionBtn').addEventListener('click', function() {
-          addQuestion(currentQuestionType); // Явно передаем текущий тип
+          addQuestion(currentQuestionType);
         });
 
-        // Типы вопросов - ИСПРАВЛЕНО: правильное обновление currentQuestionType
+        // Типы вопросов
         document.querySelectorAll('.type-btn').forEach(btn => {
           btn.addEventListener('click', function() {
             document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentQuestionType = this.getAttribute('data-type');
-            console.log('Тип вопроса изменен на:', currentQuestionType); // Для отладки
           });
         });
 
@@ -699,15 +711,12 @@
           tab.addEventListener('click', () => {
             const tabName = tab.getAttribute('data-tab');
             
-            // Деактивируем все вкладки и секции
             document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
             
-            // Активируем выбранную
             tab.classList.add('active');
             document.getElementById(`${tabName}-section`).classList.add('active');
             
-            // Если перешли на вкладку фонов, обновляем список
             if (tabName === 'background') {
               loadCurrentBackground();
               loadBackgroundsList();
@@ -742,17 +751,14 @@
         // Функция для загрузки статистики
         async function loadStats() {
           try {
-            // Считаем задания
             const { data: tasks, error: tasksError } = await supabase
               .from('tasks')
               .select('id, content');
             
-            // Считаем пользователей
             const { data: users, error: usersError } = await supabase
               .from('profiles')
               .select('id');
 
-            // Считаем фоны
             const { data: backgrounds, error: backgroundsError } = await supabase
               .from('backgrounds')
               .select('id');
@@ -769,7 +775,6 @@
 
         // ===== УПРАВЛЕНИЕ ФОНАМИ =====
 
-        // Загрузка текущего активного фона
         async function loadCurrentBackground() {
           const { data: activeBackground, error } = await supabase
             .from('backgrounds')
@@ -789,7 +794,6 @@
           const noBgMessage = document.getElementById('noBackgroundMessage');
           const infoDiv = document.getElementById('currentBackgroundInfo');
 
-          // Очищаем предыдущую информацию
           infoDiv.innerHTML = '';
 
           if (activeBackground) {
@@ -797,7 +801,6 @@
             image.style.display = 'block';
             noBgMessage.style.display = 'none';
             
-            // Добавляем информацию о файле
             const info = document.createElement('div');
             info.className = 'small-muted';
             info.innerHTML = `
@@ -813,7 +816,6 @@
           }
         }
 
-        // Загрузка списка всех фонов
         async function loadBackgroundsList() {
           const { data: backgrounds, error } = await supabase
             .from('backgrounds')
@@ -865,7 +867,6 @@
             container.appendChild(bgCard);
           });
 
-          // Добавляем обработчики для кнопок
           document.querySelectorAll('.set-active-bg').forEach(btn => {
             btn.addEventListener('click', async () => {
               const bgId = btn.getAttribute('data-bg-id');
@@ -881,10 +882,8 @@
           });
         }
 
-        // Установка активного фона
         async function setActiveBackground(bgId) {
           try {
-            // Сначала снимаем активный статус со всех фонов
             const { error: updateError } = await supabase
               .from('backgrounds')
               .update({ is_active: false })
@@ -892,7 +891,6 @@
 
             if (updateError) throw updateError;
 
-            // Устанавливаем новый активный фон
             const { error: setError } = await supabase
               .from('backgrounds')
               .update({ is_active: true })
@@ -909,14 +907,12 @@
           }
         }
 
-        // Удаление фона
         async function deleteBackground(bgId) {
           if (!confirm('Вы уверены, что хотите удалить этот фон?\n\nЭто действие нельзя отменить.')) {
             return;
           }
 
           try {
-            // Получаем информацию о фоне для удаления из Storage
             const { data: background, error: fetchError } = await supabase
               .from('backgrounds')
               .select('*')
@@ -925,7 +921,6 @@
 
             if (fetchError) throw fetchError;
 
-            // Удаляем файл из Storage
             const filePath = background.image_url.split('/').pop();
             const { error: storageError } = await supabase.storage
               .from('backgrounds')
@@ -933,10 +928,8 @@
 
             if (storageError) {
               console.warn('Не удалось удалить файл из Storage:', storageError);
-              // Продолжаем удаление записи из базы даже если файл не найден
             }
 
-            // Удаляем запись из базы
             const { error: deleteError } = await supabase
               .from('backgrounds')
               .delete()
@@ -954,32 +947,27 @@
           }
         }
 
-        // Загрузка нового фона
         async function uploadBackground(file) {
           const progressBar = document.getElementById('backgroundProgressBar');
           const progress = document.getElementById('backgroundProgress');
           const uploadBtn = document.getElementById('uploadBackgroundBtn');
 
           try {
-            // Показываем прогресс
             progress.style.display = 'block';
             progressBar.style.width = '0%';
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'Загружаем...';
 
-            // Проверка размера файла (макс. 10MB)
             if (file.size > 10 * 1024 * 1024) {
               throw new Error('Файл слишком большой! Максимальный размер: 10MB');
             }
 
-            // Проверка типа файла
             if (!file.type.match('image.*')) {
               throw new Error('Пожалуйста, выберите файл изображения!');
             }
 
             progressBar.style.width = '25%';
 
-            // Загружаем файл в Supabase Storage
             const fileExt = file.name.split('.').pop();
             const fileName = `background-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
             const filePath = `backgrounds/${fileName}`;
@@ -995,14 +983,12 @@
 
             progressBar.style.width = '50%';
 
-            // Получаем публичный URL
             const { data: { publicUrl } } = supabase.storage
               .from('backgrounds')
               .getPublicUrl(filePath);
 
             progressBar.style.width = '75%';
 
-            // Сохраняем информацию в базу данных
             const { error: dbError } = await supabase
               .from('backgrounds')
               .insert([{
@@ -1011,21 +997,19 @@
                 file_size: file.size,
                 mime_type: file.type,
                 created_by: currentUser.id,
-                is_active: false // Новый фон по умолчанию не активен
+                is_active: false
               }]);
 
             if (dbError) throw dbError;
 
             progressBar.style.width = '100%';
 
-            // Успешная загрузка
             setTimeout(() => {
               progress.style.display = 'none';
               uploadBtn.disabled = false;
               uploadBtn.textContent = '📤 Загрузить фон';
               uploadBtn.style.display = 'none';
               
-              // Очищаем input
               document.getElementById('backgroundInput').value = '';
               
               showModal('Успех', '✅ Фон успешно загружен!\n\nТеперь вы можете сделать его активным в списке ниже.');
@@ -1043,13 +1027,11 @@
           }
         }
 
-        // Инициализация функционала фонов
         function initBackgrounds() {
           const backgroundInput = document.getElementById('backgroundInput');
           const backgroundUploadArea = document.getElementById('backgroundUploadArea');
           const uploadBtn = document.getElementById('uploadBackgroundBtn');
 
-          // Drag & Drop функционал
           backgroundUploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             backgroundUploadArea.classList.add('dragover');
@@ -1070,22 +1052,18 @@
             }
           });
 
-          // Клик по области загрузки
           backgroundUploadArea.addEventListener('click', () => {
             backgroundInput.click();
           });
 
-          // Изменение выбора файла
           backgroundInput.addEventListener('change', handleBackgroundSelection);
 
-          // Кнопка загрузки
           uploadBtn.addEventListener('click', () => {
             if (backgroundInput.files && backgroundInput.files[0]) {
               uploadBackground(backgroundInput.files[0]);
             }
           });
 
-          // Загружаем текущие данные
           loadCurrentBackground();
           loadBackgroundsList();
         }
@@ -1097,7 +1075,6 @@
           if (file) {
             uploadBtn.style.display = 'block';
             
-            // Показываем предпросмотр
             const reader = new FileReader();
             reader.onload = function(e) {
               const preview = document.getElementById('currentBackgroundPreview');
@@ -1106,7 +1083,6 @@
               tempImg.className = 'background-preview';
               tempImg.style.display = 'block';
               
-              // Временно заменяем текущий фон на предпросмотр
               const currentImg = document.getElementById('currentBackgroundImage');
               const noBg = document.getElementById('noBackgroundMessage');
               currentImg.style.display = 'none';
@@ -1187,7 +1163,6 @@
             tbody.appendChild(tr);
           });
 
-          // Добавляем обработчики для кнопок действий
           document.querySelectorAll('[data-user-id]').forEach(btn => {
             if (btn.textContent.includes('админ')) {
               btn.addEventListener('click', () => {
@@ -1309,7 +1284,6 @@
             tbody.appendChild(tr);
           });
 
-          // Добавляем обработчики для кнопок заданий
           document.querySelectorAll('.edit-task').forEach(btn => {
             btn.addEventListener('click', () => {
               const taskId = btn.getAttribute('data-task-id');
@@ -1336,7 +1310,6 @@
           editingTaskId = null;
           questionCounter = 0;
           
-          // ИСПРАВЛЕНО: сбрасываем тип вопроса на mcq при создании новой формы
           currentQuestionType = 'mcq';
           document.querySelectorAll('.type-btn').forEach(btn => {
             btn.classList.remove('active');
@@ -1345,11 +1318,9 @@
             }
           });
           
-          // Очищаем вопросы
           const questionsContainer = document.getElementById('questionsContainer');
           questionsContainer.innerHTML = '';
           
-          // Добавляем первый вопрос
           addQuestion('mcq');
         }
         
@@ -1363,7 +1334,6 @@
           
           const imageInput = document.getElementById(`imageInput${questionIndex}`);
           
-          // Обработчики drag and drop
           uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -1389,13 +1359,11 @@
           const file = input.files[0];
           if (!file) return;
           
-          // Проверка размера файла (макс. 5MB)
           if (file.size > 5 * 1024 * 1024) {
             alert('Файл слишком большой! Максимальный размер: 5MB');
             return;
           }
           
-          // Проверка типа файла
           if (!file.type.match('image.*')) {
             alert('Пожалуйста, выберите файл изображения!');
             return;
@@ -1407,17 +1375,13 @@
           const removeBtn = document.getElementById(`removeBtn${questionIndex}`);
           const uploadArea = document.getElementById(`uploadArea${questionIndex}`);
           
-          // Показываем прогресс
           progress.style.display = 'block';
           progressBar.style.width = '0%';
           
-          // Загружаем изображение
           uploadQuestionImage(file, questionIndex)
             .then(imageUrl => {
-              // Сохраняем URL в скрытом поле
               document.getElementById(`imageUrl${questionIndex}`).value = imageUrl;
               
-              // Показываем превью
               preview.src = imageUrl;
               preview.style.display = 'block';
               removeBtn.style.display = 'block';
@@ -1446,37 +1410,48 @@
           uploadArea.style.display = 'block';
           imageUrlInput.value = '';
           imageInput.value = '';
+          
+          // Также очищаем файл в input
+          imageInput.type = 'file'; // Это сбросит значение
         }
         
-        // Функция для добавления нового поля ответа в fill-вопросе
-        function addFillAnswerField(container) {
-          const answerItem = document.createElement('div');
-          answerItem.className = 'fill-answer-item';
-          answerItem.innerHTML = `
-            <input type="text" class="input fill-answer" placeholder="Введите правильный ответ">
-            <button type="button" class="remove-answer-btn">🗑️</button>
+        // Функция для добавления нового поля ввода в fill-вопросе
+        function addFillInputField(container) {
+          const inputCount = container.querySelectorAll('.fill-input-item').length;
+          const inputItem = document.createElement('div');
+          inputItem.className = 'fill-input-item';
+          inputItem.innerHTML = `
+            <input type="text" class="input" placeholder="Правильный ответ для поля ${inputCount + 1}">
+            <button type="button" class="remove-input-btn">🗑️</button>
           `;
           
-          container.appendChild(answerItem);
+          container.appendChild(inputItem);
           
-          // Обработчик для удаления поля ответа
-          const removeBtn = answerItem.querySelector('.remove-answer-btn');
+          const removeBtn = inputItem.querySelector('.remove-input-btn');
           removeBtn.addEventListener('click', function() {
-            if (container.querySelectorAll('.fill-answer-item').length > 1) {
-              answerItem.remove();
+            if (container.querySelectorAll('.fill-input-item').length > 1) {
+              inputItem.remove();
+              updateInputCount(container);
             } else {
               alert('Должен остаться хотя бы один вариант ответа');
             }
           });
+          
+          updateInputCount(container);
         }
         
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ: addQuestion теперь явно принимает тип
+        function updateInputCount(container) {
+          const count = container.querySelectorAll('.fill-input-item').length;
+          const countElement = container.parentElement.querySelector('.input-count');
+          if (countElement) {
+            countElement.textContent = `Количество полей: ${count}`;
+          }
+        }
+        
         function addQuestion(type = null) {
           const questionsContainer = document.getElementById('questionsContainer');
           const questionType = type || currentQuestionType;
           questionCounter++;
-          
-          console.log('Создаем вопрос типа:', questionType); // Для отладки
           
           const newQuestion = document.createElement('div');
           newQuestion.className = 'subtask-item';
@@ -1533,14 +1508,15 @@
                 <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionCounter}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
               </div>
               <div class="form-group">
-                <label>Правильные ответы (можно несколько):</label>
-                <div class="fill-answers-container">
-                  <div class="fill-answer-item">
-                    <input type="text" class="input fill-answer" placeholder="Введите правильный ответ">
-                    <button type="button" class="remove-answer-btn">🗑️</button>
+                <label>Поля для ввода ответов (каждое поле — отдельный правильный ответ):</label>
+                <div class="fill-inputs-container">
+                  <div class="fill-input-item">
+                    <input type="text" class="input" placeholder="Правильный ответ для поля 1">
+                    <button type="button" class="remove-input-btn">🗑️</button>
                   </div>
                 </div>
-                <button type="button" class="btn btn-small add-fill-answer">+ Добавить вариант</button>
+                <div class="input-count">Количество полей: 1</div>
+                <button type="button" class="btn btn-small add-fill-input">+ Добавить поле</button>
               </div>
               <button class="btn btn-small btn-danger remove-question">Удалить вопрос</button>
             `;
@@ -1548,7 +1524,6 @@
           
           questionsContainer.appendChild(newQuestion);
           
-          // Добавляем обработчики для нового вопроса
           const uploadArea = document.getElementById(`uploadArea${questionCounter}`);
           const imageInput = document.getElementById(`imageInput${questionCounter}`);
           const removeBtn = document.getElementById(`removeBtn${questionCounter}`);
@@ -1565,22 +1540,21 @@
             }
           });
           
-          // Обработчик для добавления вариантов ответа в fill-вопросе
-          const addFillAnswerBtn = newQuestion.querySelector('.add-fill-answer');
-          if (addFillAnswerBtn) {
-            addFillAnswerBtn.addEventListener('click', function() {
-              const container = newQuestion.querySelector('.fill-answers-container');
-              addFillAnswerField(container);
+          const addFillInputBtn = newQuestion.querySelector('.add-fill-input');
+          if (addFillInputBtn) {
+            addFillInputBtn.addEventListener('click', function() {
+              const container = newQuestion.querySelector('.fill-inputs-container');
+              addFillInputField(container);
             });
           }
           
-          // Обработчики для уже существующих кнопок удаления ответов
-          const existingRemoveBtns = newQuestion.querySelectorAll('.remove-answer-btn');
+          const existingRemoveBtns = newQuestion.querySelectorAll('.remove-input-btn');
           existingRemoveBtns.forEach(btn => {
             btn.addEventListener('click', function() {
-              const container = newQuestion.querySelector('.fill-answers-container');
-              if (container.querySelectorAll('.fill-answer-item').length > 1) {
-                btn.closest('.fill-answer-item').remove();
+              const container = newQuestion.querySelector('.fill-inputs-container');
+              if (container.querySelectorAll('.fill-input-item').length > 1) {
+                btn.closest('.fill-input-item').remove();
+                updateInputCount(container);
               } else {
                 alert('Должен остаться хотя бы один вариант ответа');
               }
@@ -1611,11 +1585,9 @@
           editingTaskId = taskId;
           questionCounter = 0;
           
-          // Очищаем вопросы
           const questionsContainer = document.getElementById('questionsContainer');
           questionsContainer.innerHTML = '';
           
-          // Заполняем вопросы из задания
           const questions = task.content?.questions || [];
           questions.forEach((q, i) => {
             questionCounter++;
@@ -1624,12 +1596,11 @@
             questionDiv.setAttribute('data-type', q.type || 'mcq');
             
             if (q.type === 'fill') {
-              // Поддержка старого формата (один ответ) и нового (массив ответов)
               const answers = Array.isArray(q.answers) ? q.answers : [q.answer || ''];
-              const answersHTML = answers.map(answer => `
-                <div class="fill-answer-item">
-                  <input type="text" class="input fill-answer" value="${escapeHtml(answer)}" placeholder="Введите правильный ответ">
-                  <button type="button" class="remove-answer-btn">🗑️</button>
+              const inputsHTML = answers.map((answer, index) => `
+                <div class="fill-input-item">
+                  <input type="text" class="input" value="${escapeHtml(answer)}" placeholder="Правильный ответ для поля ${index + 1}">
+                  <button type="button" class="remove-input-btn">🗑️</button>
                 </div>
               `).join('');
               
@@ -1653,11 +1624,12 @@
                   <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionCounter}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
                 </div>
                 <div class="form-group">
-                  <label>Правильные ответы (можно несколько):</label>
-                  <div class="fill-answers-container">
-                    ${answersHTML}
+                  <label>Поля для ввода ответов (каждое поле — отдельный правильный ответ):</label>
+                  <div class="fill-inputs-container">
+                    ${inputsHTML}
                   </div>
-                  <button type="button" class="btn btn-small add-fill-answer">+ Добавить вариант</button>
+                  <div class="input-count">Количество полей: ${answers.length}</div>
+                  <button type="button" class="btn btn-small add-fill-input">+ Добавить поле</button>
                 </div>
                 <button class="btn btn-small btn-danger remove-question">Удалить вопрос</button>
               `;
@@ -1695,7 +1667,6 @@
             
             questionsContainer.appendChild(questionDiv);
             
-            // Добавляем обработчики для редактируемого вопроса
             const uploadArea = document.getElementById(`uploadArea${questionCounter}`);
             const imageInput = document.getElementById(`imageInput${questionCounter}`);
             const removeBtn = document.getElementById(`removeBtn${questionCounter}`);
@@ -1716,22 +1687,21 @@
               }
             });
             
-            // Обработчик для добавления вариантов ответа в fill-вопросе
-            const addFillAnswerBtn = questionDiv.querySelector('.add-fill-answer');
-            if (addFillAnswerBtn) {
-              addFillAnswerBtn.addEventListener('click', function() {
-                const container = questionDiv.querySelector('.fill-answers-container');
-                addFillAnswerField(container);
+            const addFillInputBtn = questionDiv.querySelector('.add-fill-input');
+            if (addFillInputBtn) {
+              addFillInputBtn.addEventListener('click', function() {
+                const container = questionDiv.querySelector('.fill-inputs-container');
+                addFillInputField(container);
               });
             }
             
-            // Обработчики для кнопок удаления ответов
-            const removeAnswerBtns = questionDiv.querySelectorAll('.remove-answer-btn');
-            removeAnswerBtns.forEach(btn => {
+            const removeInputBtns = questionDiv.querySelectorAll('.remove-input-btn');
+            removeInputBtns.forEach(btn => {
               btn.addEventListener('click', function() {
-                const container = questionDiv.querySelector('.fill-answers-container');
-                if (container.querySelectorAll('.fill-answer-item').length > 1) {
-                  btn.closest('.fill-answer-item').remove();
+                const container = questionDiv.querySelector('.fill-inputs-container');
+                if (container.querySelectorAll('.fill-input-item').length > 1) {
+                  btn.closest('.fill-input-item').remove();
+                  updateInputCount(container);
                 } else {
                   alert('Должен остаться хотя бы один вариант ответа');
                 }
@@ -1791,9 +1761,8 @@
                 correct: correct
               });
             } else {
-              // Собираем все ответы из fill-вопроса
-              const answerInputs = item.querySelectorAll('.fill-answer');
-              const answers = Array.from(answerInputs).map(input => input.value.trim()).filter(val => val !== '');
+              const inputItems = item.querySelectorAll('.fill-input-item input');
+              const answers = Array.from(inputItems).map(input => input.value.trim()).filter(val => val !== '');
               
               if (answers.length === 0) {
                 alert('Введите хотя бы один правильный ответ для вопроса с вводом текста');
@@ -1804,14 +1773,13 @@
                 type: 'fill',
                 q: question,
                 image: imageUrl || null,
-                answers: answers  // теперь это массив
+                answers: answers
               });
             }
           }
           
           const content = { questions };
           
-          // Правильное определение типа задания
           const hasMcq = questions.some(q => q.type === 'mcq');
           const hasFill = questions.some(q => q.type === 'fill');
           
@@ -1822,7 +1790,6 @@
             taskType = 'fill';
           }
           
-          // Сохраняем задание
           try {
             if (editingTaskId) {
               const { error } = await supabase
@@ -1891,15 +1858,12 @@
           }
         }
 
-        // Инициализация админ-панели
         async function initAdmin() {
-          // Загрузка данных
           loadUsers();
           loadTasks();
           loadStats();
           initBackgrounds();
           
-          // Добавляем первый вопрос при загрузке
           addQuestion('mcq');
         }
 
@@ -1913,11 +1877,9 @@
       }
     }
     
-    // Конфигурация должна загружаться мгновенно
     if (window.SUPABASE_URL) {
       initApp();
     } else {
-      // Ждем событие конфигурации (максимум 1 секунду)
       const timeout = setTimeout(() => {
         showError('❌ Таймаут загрузки конфигурации');
       }, 1000);
