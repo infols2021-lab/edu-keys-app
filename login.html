@@ -26,17 +26,25 @@
       border-radius: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
       text-align: center;
-      backdrop-filter: blur(10px);
     }
     .login-card h2 {
       margin: 0 0 20px 0;
       color: #333;
       font-size: 1.5rem;
     }
+    .form-group {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #333;
+    }
     .login-card input {
       width: 100%;
       padding: 12px 15px;
-      margin: 8px 0;
       border: 2px solid #f0f0f0;
       border-radius: 12px;
       box-sizing: border-box;
@@ -129,7 +137,6 @@
     @media (max-width: 480px) {
       body {
         padding: 15px;
-        background: linear-gradient(135deg, #fdd835, #f48fb1);
       }
       .login-container {
         max-width: 100%;
@@ -170,8 +177,16 @@
       <div id="warningMessage" class="warning"></div>
       
       <div id="loginForm" style="display: none;">
-        <input type="email" id="email" placeholder="Ваш email" autocomplete="email">
-        <input type="password" id="password" placeholder="Ваш пароль" autocomplete="current-password">
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" placeholder="example@gmail.com" autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" placeholder="Введите ваш пароль" autocomplete="current-password">
+        </div>
+
         <button class="btn" id="loginBtn">Войти как ученик</button>
         <button class="btn admin" id="adminLoginBtn">Войти как администратор</button>
 
@@ -238,7 +253,6 @@
           supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) {
               console.log('👤 Пользователь уже авторизован');
-              // Редирект на профиль или админку
               checkUserRoleAndRedirect(user);
             }
           });
@@ -254,7 +268,6 @@
             }
           });
 
-          // Поддержка Enter в email поле
           document.getElementById('email').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
               document.getElementById('password').focus();
@@ -307,13 +320,11 @@
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         
         if (error) {
-          // Проверяем различные типы ошибок
           if (error.message.includes('Invalid login credentials')) {
             showError('❌ Неверный email или пароль');
           } else if (error.message.includes('Email not confirmed')) {
             showError('❌ Email не подтвержден. Проверьте вашу почту и подтвердите регистрацию.');
             
-            // Предлагаем отправить письмо повторно
             const resend = confirm('Отправить письмо с подтверждением повторно?');
             if (resend) {
               const { error: resendError } = await supabase.auth.resend({
@@ -344,7 +355,6 @@
           return;
         }
 
-        // Проверяем права администратора если нужно
         if (isAdmin) {
           const { data: profile } = await supabase
             .from('profiles')

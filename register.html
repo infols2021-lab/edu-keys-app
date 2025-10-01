@@ -18,7 +18,7 @@
     }
     .register-container {
       width: 100%;
-      max-width: 420px;
+      max-width: 450px;
     }
     .register-card {
       background: #fff;
@@ -32,10 +32,19 @@
       color: #333;
       font-size: 1.5rem;
     }
+    .form-group {
+      margin-bottom: 15px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #333;
+    }
     .register-card input {
       width: 100%;
       padding: 12px 15px;
-      margin: 8px 0;
       border: 2px solid #f0f0f0;
       border-radius: 12px;
       box-sizing: border-box;
@@ -138,6 +147,16 @@
     }
     .validation-icon {
       font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+    .rate-limit {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 13px;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -188,10 +207,29 @@
       <div id="warningMessage" class="warning"></div>
       
       <div id="registerForm" style="display: none;">
-        <input type="text" id="fullname" placeholder="Ваше полное имя" required>
-        <input type="email" id="email" placeholder="Ваш email" required>
-        <input type="email" id="confirmEmail" placeholder="Подтвердите email" required>
-        <input type="password" id="password" placeholder="Пароль (минимум 6 символов)" required minlength="6">
+        <div class="rate-limit">
+          ⚠️ <strong>Защита от спама:</strong> Максимум 3 регистрации в час с одного устройства
+        </div>
+
+        <div class="form-group">
+          <label for="fullname">Полное имя:</label>
+          <input type="text" id="fullname" placeholder="Иванов Иван Иванович" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email:</label>
+          <input type="email" id="email" placeholder="example@gmail.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmEmail">Подтверждение email:</label>
+          <input type="email" id="confirmEmail" placeholder="example@gmail.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" placeholder="Не менее 6 символов" required minlength="6">
+        </div>
         
         <div class="email-validation">
           <div class="validation-item" id="validationFormat">
@@ -203,9 +241,12 @@
           <div class="validation-item" id="validationPassword">
             <span class="validation-icon">⭕</span> Пароль не менее 6 символов
           </div>
+          <div class="validation-item" id="validationDomain">
+            <span class="validation-icon">⭕</span> Разрешенный почтовый сервис
+          </div>
         </div>
         
-        <button class="btn" id="registerBtn" disabled>Зарегистрироваться</button>
+        <button class="btn" id="registerBtn" disabled>Создать аккаунт</button>
         <div class="link">
           <p>Уже есть аккаунт? <a href="/login.html">Войти в систему</a></p>
         </div>
@@ -214,23 +255,30 @@
   </div>
 
   <script type="module">
-    // Список разрешенных почтовых доменов
+    // Строгий список разрешенных почтовых доменов
     const ALLOWED_DOMAINS = [
       'gmail.com', 'yandex.ru', 'mail.ru', 'ya.ru', 'yandex.com',
       'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com',
-      'icloud.com', 'me.com', 'mac.com', 'protonmail.com',
-      'rambler.ru', 'bk.ru', 'list.ru', 'inbox.ru', 'student.edu',
-      'edu.ru', 'school.ru', 'yandex.ua', 'mail.ua', 'ukr.net'
+      'icloud.com', 'me.com', 'mac.com'
     ];
 
-    // Список запрещенных (временных) доменов
+    // Расширенный список запрещенных (временных) доменов
     const BLOCKED_DOMAINS = [
       'tempmail.com', '10minutemail.com', 'guerrillamail.com',
       'mailinator.com', 'yopmail.com', 'throwawaymail.com',
       'fakeinbox.com', 'temp-mail.org', 'trashmail.com',
       'getnada.com', 'tmpmail.org', 'maildrop.cc', 'disposablemail.com',
-      'fake-mail.com', 'tempinbox.com', 'jetable.org', 'mailnesia.com'
+      'fake-mail.com', 'tempinbox.com', 'jetable.org', 'mailnesia.com',
+      'sharklasers.com', 'guerrillamail.biz', 'grr.la', 'guerrillamail.info',
+      'spam4.me', 'fakeinbox.com', 'tmpmail.net', 'trashmail.com'
     ];
+
+    // Система ограничения регистраций
+    const REGISTRATION_LIMIT = {
+      maxAttempts: 3,
+      timeWindow: 60 * 60 * 1000, // 1 час
+      key: 'edu-keys-registration-limits'
+    };
 
     function showError(message) {
       const errorEl = document.getElementById('errorMessage');
@@ -279,11 +327,61 @@
       if (!ALLOWED_DOMAINS.includes(domain)) {
         return { 
           valid: false, 
-          message: `Используйте email от популярных сервисов: ${ALLOWED_DOMAINS.slice(0, 5).join(', ')}...` 
+          message: `Разрешены только email от: ${ALLOWED_DOMAINS.join(', ')}` 
         };
       }
       
       return { valid: true };
+    }
+
+    // Система ограничения регистраций
+    function checkRateLimit() {
+      try {
+        const now = Date.now();
+        const limits = JSON.parse(localStorage.getItem(REGISTRATION_LIMIT.key) || '{"attempts":[],"lastReset":0}');
+        
+        // Сбрасываем старые попытки
+        const recentAttempts = limits.attempts.filter(time => now - time < REGISTRATION_LIMIT.timeWindow);
+        
+        if (recentAttempts.length >= REGISTRATION_LIMIT.maxAttempts) {
+          const nextAttempt = Math.min(...recentAttempts) + REGISTRATION_LIMIT.timeWindow;
+          const minutesLeft = Math.ceil((nextAttempt - now) / (60 * 1000));
+          return { allowed: false, message: `Превышен лимит регистраций. Попробуйте через ${minutesLeft} минут.` };
+        }
+        
+        // Сохраняем текущую попытку
+        recentAttempts.push(now);
+        localStorage.setItem(REGISTRATION_LIMIT.key, JSON.stringify({
+          attempts: recentAttempts,
+          lastReset: now
+        }));
+        
+        return { allowed: true };
+      } catch (e) {
+        console.warn('Rate limit check failed:', e);
+        return { allowed: true }; // В случае ошибки разрешаем регистрацию
+      }
+    }
+
+    // Функция DNS проверки домена (упрощенная)
+    async function checkDomainExists(email) {
+      const domain = email.split('@')[1];
+      if (!domain) return false;
+      
+      try {
+        // Создаем изображение для проверки доступности домена
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = `https://${domain}/favicon.ico?t=${Date.now()}`;
+          
+          // Таймаут 3 секунды
+          setTimeout(() => resolve(false), 3000);
+        });
+      } catch (e) {
+        return true; // В случае ошибки разрешаем регистрацию
+      }
     }
 
     // Функция обновления визуальной валидации
@@ -310,9 +408,14 @@
       passwordItem.className = `validation-item ${passwordValid ? 'valid' : (password ? 'invalid' : '')}`;
       passwordItem.querySelector('.validation-icon').textContent = passwordValid ? '✅' : (password ? '❌' : '⭕');
       
+      // Валидация домена
+      const domainValid = email ? validateDomain(email).valid : false;
+      const domainItem = document.getElementById('validationDomain');
+      domainItem.className = `validation-item ${domainValid ? 'valid' : (email ? 'invalid' : '')}`;
+      domainItem.querySelector('.validation-icon').textContent = domainValid ? '✅' : (email ? '❌' : '⭕');
+      
       // Активация кнопки регистрации
       const registerBtn = document.getElementById('registerBtn');
-      const domainValid = email ? validateDomain(email).valid : false;
       registerBtn.disabled = !(formatValid && matchValid && passwordValid && domainValid);
     }
     
@@ -369,11 +472,29 @@
               return;
             }
 
+            // Проверка ограничения регистраций
+            const rateLimit = checkRateLimit();
+            if (!rateLimit.allowed) {
+              showError(rateLimit.message);
+              return;
+            }
+
             try {
               document.getElementById('registerBtn').disabled = true;
-              document.getElementById('registerBtn').textContent = 'Регистрируем...';
+              document.getElementById('registerBtn').textContent = 'Проверяем данные...';
               
-              showWarning('🔄 Создаем аккаунт и отправляем письмо для подтверждения...');
+              showWarning('🔍 Проверяем ваши данные...');
+
+              // Дополнительная проверка домена
+              const domainExists = await checkDomainExists(email);
+              if (!domainExists) {
+                showError('❌ Не удалось проверить домен email. Убедитесь, что email существует.');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('registerBtn').textContent = 'Создать аккаунт';
+                return;
+              }
+
+              showWarning('🔄 Создаем аккаунт...');
 
               // Регистрируем пользователя с обязательным подтверждением email
               const { data, error } = await supabase.auth.signUp({
@@ -383,7 +504,7 @@
                   data: { 
                     full_name: fullname
                   },
-                  emailRedirectTo: window.location.origin + '/login.html?message=confirmed'
+                  emailRedirectTo: window.location.origin + '/auth-confirm.html'
                 }
               });
 
@@ -391,12 +512,12 @@
                 if (error.message.includes('already registered')) {
                   showError('Этот email уже зарегистрирован. Используйте другой email или восстановите пароль.');
                 } else if (error.message.includes('rate limit')) {
-                  showError('Слишком много попыток. Попробуйте через несколько минут.');
+                  showError('Слишком много попыток регистрации. Попробуйте через час.');
                 } else {
                   throw error;
                 }
                 document.getElementById('registerBtn').disabled = false;
-                document.getElementById('registerBtn').textContent = 'Зарегистрироваться';
+                document.getElementById('registerBtn').textContent = 'Создать аккаунт';
                 return;
               }
 
@@ -419,7 +540,7 @@
               console.error('Registration error:', error);
               showError('Ошибка регистрации: ' + error.message);
               document.getElementById('registerBtn').disabled = false;
-              document.getElementById('registerBtn').textContent = 'Зарегистрироваться';
+              document.getElementById('registerBtn').textContent = 'Создать аккаунт';
             }
           });
 
