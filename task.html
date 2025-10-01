@@ -60,6 +60,15 @@
       margin-bottom: 15px;
       font-size: 14px;
     }
+    .multiple-answers-hint {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #856404;
+    }
   </style>
   
   <script src="/load-config.js"></script>
@@ -243,7 +252,6 @@
 
             if (error) {
               console.error('Auto-submit error:', error);
-              // ИСПРАВЛЕНИЕ: Показываем ошибку пользователю
               attemptWarning.innerHTML = '<strong>⏰ Время вышло, но не удалось отправить ответ автоматически. Сообщите администратору.</strong>';
               return;
             }
@@ -445,9 +453,15 @@
                 `).join('')}
               </div>`;
             } else if (q.type === 'fill') {
+              // Добавляем подсказку о регистронезависимости
               questionHTML += `
                 <label class="fill-label">Ваш ответ:</label>
                 <input type="text" class="fill-input" name="fill${i}" placeholder="Введите ваш ответ здесь..." autocomplete="off">
+                <div class="multiple-answers-hint">
+                  💡 <strong>Важно:</strong> Регистр не имеет значения. Ответ будет проверяться автоматически.
+                  ${Array.isArray(q.answers) && q.answers.length > 1 ? 
+                    '<br>⚠️ <strong>Примечание:</strong> Есть несколько вариантов правильного ответа.' : ''}
+                </div>
               `;
             }
             
@@ -547,7 +561,6 @@
 
             if (error) {
               console.error('RPC Error:', error);
-              // ИСПРАВЛЕНИЕ: Показываем детальную ошибку
               showModal('Ошибка отправки', 'Не удалось отправить ответ: ' + error.message);
               submitBtn.disabled = false;
               submitBtn.textContent = 'Отправить ответ';
