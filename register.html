@@ -82,7 +82,7 @@
     .link a:hover {
       text-decoration: underline;
     }
-    .error, .success {
+    .error, .success, .warning {
       padding: 12px;
       border-radius: 8px;
       margin: 15px 0;
@@ -99,6 +99,11 @@
       color: #2e7d32;
       border: 1px solid #c8e6c9;
     }
+    .warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
     .loading {
       display: none;
       margin: 15px 0;
@@ -112,6 +117,24 @@
       height: 24px;
       animation: spin 1s linear infinite;
       margin: 0 auto 10px;
+    }
+    .email-validation {
+      text-align: left;
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .validation-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px 0;
+      color: #666;
+    }
+    .validation-item.valid {
+      color: #4caf50;
+    }
+    .validation-item.invalid {
+      color: #f44336;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -166,11 +189,26 @@
       
       <div id="errorMessage" class="error"></div>
       <div id="successMessage" class="success"></div>
+      <div id="warningMessage" class="warning"></div>
       
       <div id="registerForm" style="display: none;">
         <input type="text" id="fullname" placeholder="ФИО" required>
         <input type="email" id="email" placeholder="Email" required>
+        <input type="email" id="confirmEmail" placeholder="Подтвердите email" required>
         <input type="password" id="password" placeholder="Пароль" required minlength="6">
+        
+        <div class="email-validation">
+          <div class="validation-item" id="validationFormat">
+            <span>✓</span> Правильный формат email
+          </div>
+          <div class="validation-item" id="validationMatch">
+            <span>✓</span> Email адреса совпадают
+          </div>
+          <div class="validation-item" id="validationDomain">
+            <span>✓</span> Допустимый почтовый сервис
+          </div>
+        </div>
+        
         <button class="btn" id="registerBtn">Зарегистрироваться</button>
         <div class="link">
           <p>Уже есть аккаунт? <a href="/login.html">Вход</a></p>
@@ -180,11 +218,28 @@
   </div>
 
   <script type="module">
+    // Список разрешенных почтовых доменов
+    const ALLOWED_DOMAINS = [
+      'gmail.com', 'yandex.ru', 'mail.ru', 'ya.ru', 'yandex.com',
+      'outlook.com', 'hotmail.com', 'live.com', 'yahoo.com',
+      'icloud.com', 'me.com', 'mac.com', 'protonmail.com',
+      'rambler.ru', 'bk.ru', 'list.ru', 'inbox.ru', 'student.edu'
+    ];
+
+    // Список запрещенных (временных) доменов
+    const BLOCKED_DOMAINS = [
+      'tempmail.com', '10minutemail.com', 'guerrillamail.com',
+      'mailinator.com', 'yopmail.com', 'throwawaymail.com',
+      'fakeinbox.com', 'temp-mail.org', 'trashmail.com',
+      'getnada.com', 'tmpmail.org', 'maildrop.cc'
+    ];
+
     function showError(message) {
       const errorEl = document.getElementById('errorMessage');
       errorEl.textContent = message;
       errorEl.style.display = 'block';
       document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('warningMessage').style.display = 'none';
       document.getElementById('loading').style.display = 'none';
     }
     
@@ -193,7 +248,68 @@
       successEl.textContent = message;
       successEl.style.display = 'block';
       document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('warningMessage').style.display = 'none';
       document.getElementById('loading').style.display = 'none';
+    }
+
+    function showWarning(message) {
+      const warningEl = document.getElementById('warningMessage');
+      warningEl.textContent = message;
+      warningEl.style.display = 'block';
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+    }
+    
+    // Функция валидации email
+    function validateEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    // Функция проверки домена
+    function validateDomain(email) {
+      const domain = email.split('@')[1].toLowerCase();
+      
+      // Проверка запрещенных доменов
+      if (BLOCKED_DOMAINS.includes(domain)) {
+        return { valid: false, message: 'Временные email адреса запрещены' };
+      }
+      
+      // Проверка разрешенных доменов
+      if (!ALLOWED_DOMAINS.includes(domain)) {
+        return { 
+          valid: false, 
+          message: `Пожалуйста, используйте email от ${ALLOWED_DOMAINS.slice(0, 3).join(', ')} и других популярных сервисов` 
+        };
+      }
+      
+      return { valid: true };
+    }
+
+    // Функция обновления визуальной валидации
+    function updateValidation() {
+      const email = document.getElementById('email').value.trim();
+      const confirmEmail = document.getElementById('confirmEmail').value.trim();
+      
+      // Валидация формата
+      const formatValid = validateEmail(email);
+      document.getElementById('validationFormat').className = 
+        `validation-item ${formatValid ? 'valid' : (email ? 'invalid' : '')}`;
+      
+      // Валидация совпадения
+      const matchValid = email && confirmEmail && email === confirmEmail;
+      document.getElementById('validationMatch').className = 
+        `validation-item ${matchValid ? 'valid' : (confirmEmail ? 'invalid' : '')}`;
+      
+      // Валидация домена
+      const domainValid = email ? validateDomain(email).valid : false;
+      document.getElementById('validationDomain').className = 
+        `validation-item ${domainValid ? 'valid' : (email ? 'invalid' : '')}`;
+      
+      // Активация кнопки регистрации
+      const registerBtn = document.getElementById('registerBtn');
+      registerBtn.disabled = !(formatValid && matchValid && domainValid);
     }
     
     function initApp() {
@@ -209,12 +325,19 @@
         .then(({ createClient }) => {
           const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
           
+          // Обработчики ввода для валидации
+          document.getElementById('email').addEventListener('input', updateValidation);
+          document.getElementById('confirmEmail').addEventListener('input', updateValidation);
+          document.getElementById('password').addEventListener('input', updateValidation);
+          
           document.getElementById('registerBtn').addEventListener('click', async () => {
             const fullname = document.getElementById('fullname').value.trim();
             const email = document.getElementById('email').value.trim();
+            const confirmEmail = document.getElementById('confirmEmail').value.trim();
             const password = document.getElementById('password').value;
 
-            if (!fullname || !email || !password) {
+            // Базовая валидация
+            if (!fullname || !email || !confirmEmail || !password) {
               showError('Заполните все поля');
               return;
             }
@@ -224,28 +347,65 @@
               return;
             }
 
+            if (email !== confirmEmail) {
+              showError('Email адреса не совпадают');
+              return;
+            }
+
+            // Расширенная валидация email
+            if (!validateEmail(email)) {
+              showError('Неверный формат email');
+              return;
+            }
+
+            const domainCheck = validateDomain(email);
+            if (!domainCheck.valid) {
+              showError(domainCheck.message);
+              return;
+            }
+
             try {
               document.getElementById('registerBtn').disabled = true;
               document.getElementById('registerBtn').textContent = 'Регистрируем...';
               
+              // Регистрируем пользователя с обязательным подтверждением email
               const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
                 options: { 
-                  data: { full_name: fullname },
+                  data: { 
+                    full_name: fullname,
+                    email_verified: false
+                  },
                   emailRedirectTo: window.location.origin + '/login.html'
                 }
               });
 
-              if (error) throw error;
+              if (error) {
+                if (error.message.includes('already registered')) {
+                  showError('Этот email уже зарегистрирован. Используйте другой email или восстановите пароль.');
+                } else {
+                  throw error;
+                }
+                return;
+              }
 
-              showSuccess('✅ Регистрация успешна! Проверьте email для подтверждения.');
-              document.getElementById('registerBtn').style.display = 'none';
-              
-              setTimeout(() => {
-                window.location.href = '/login.html';
-              }, 3000);
+              if (data.user) {
+                showSuccess('✅ Регистрация успешна! Проверьте вашу почту для подтверждения email. Без подтверждения вход невозможен.');
+                document.getElementById('registerBtn').style.display = 'none';
+                
+                // Очищаем форму
+                document.getElementById('fullname').value = '';
+                document.getElementById('email').value = '';
+                document.getElementById('confirmEmail').value = '';
+                document.getElementById('password').value = '';
+                
+                setTimeout(() => {
+                  window.location.href = '/login.html';
+                }, 5000);
+              }
             } catch (error) {
+              console.error('Registration error:', error);
               showError('Ошибка регистрации: ' + error.message);
               document.getElementById('registerBtn').disabled = false;
               document.getElementById('registerBtn').textContent = 'Зарегистрироваться';
@@ -258,6 +418,9 @@
               document.getElementById('registerBtn').click();
             }
           });
+
+          // Инициализация валидации
+          updateValidation();
         })
         .catch(error => {
           showError('❌ Ошибка загрузки Supabase: ' + error.message);
