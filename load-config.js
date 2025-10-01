@@ -7,9 +7,13 @@
 
     // Функция для сохранения в кэш
     function saveToCache(config) {
-        localStorage.setItem('edu-keys-config', JSON.stringify(config));
-        localStorage.setItem('edu-keys-config-time', now.toString());
-        console.log('✅ Конфигурация сохранена в кэш');
+        try {
+            localStorage.setItem('edu-keys-config', JSON.stringify(config));
+            localStorage.setItem('edu-keys-config-time', now.toString());
+            console.log('✅ Конфигурация сохранена в кэш');
+        } catch (e) {
+            console.warn('Не удалось сохранить в кэш:', e.message);
+        }
     }
 
     // Функция для установки конфигурации и отправки события
@@ -23,15 +27,20 @@
     }
 
     // Источник 1: Кэш localStorage (самый быстрый)
-    const cachedConfig = localStorage.getItem('edu-keys-config');
-    const cacheTime = localStorage.getItem('edu-keys-config-time');
-    
-    if (cachedConfig && cacheTime && (now - parseInt(cacheTime)) < CACHE_DURATION) {
-        const config = JSON.parse(cachedConfig);
-        setConfig(config, 'cache');
-        // Продолжаем проверять другие источники в фоне
-    } else {
-        // Источник 2: Резервные значения (мгновенно)
+    try {
+        const cachedConfig = localStorage.getItem('edu-keys-config');
+        const cacheTime = localStorage.getItem('edu-keys-config-time');
+        
+        if (cachedConfig && cacheTime && (now - parseInt(cacheTime)) < CACHE_DURATION) {
+            const config = JSON.parse(cachedConfig);
+            setConfig(config, 'cache');
+        }
+    } catch (e) {
+        console.warn('Ошибка чтения кэша:', e.message);
+    }
+
+    // Источник 2: Резервные значения (мгновенно)
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
         const fallbackConfig = {
             SUPABASE_URL: 'https://dtjhlanmwjpdcdxgzzyo.supabase.co',
             SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR0amhsYW5td2pwZGNkeGd6enlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDUwOTIsImV4cCI6MjA3MjM4MTA5Mn0.jS4DXQSOBawRFtnzjsmF5AzzltDYAG0AXrwrY1B0UpY'

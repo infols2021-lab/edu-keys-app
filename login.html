@@ -84,7 +84,7 @@
     .link a:hover {
       text-decoration: underline;
     }
-    .error, .success {
+    .error, .success, .warning {
       padding: 12px;
       border-radius: 8px;
       margin: 15px 0;
@@ -100,6 +100,11 @@
       background: #e8f5e8;
       color: #2e7d32;
       border: 1px solid #c8e6c9;
+    }
+    .warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
     }
     .loading {
       display: none;
@@ -146,13 +151,6 @@
         font-size: 16px;
       }
     }
-
-    /* Планшеты */
-    @media (min-width: 481px) and (max-width: 768px) {
-      .login-container {
-        max-width: 450px;
-      }
-    }
   </style>
   
   <script src="/load-config.js"></script>
@@ -169,15 +167,16 @@
       
       <div id="errorMessage" class="error"></div>
       <div id="successMessage" class="success"></div>
+      <div id="warningMessage" class="warning"></div>
       
       <div id="loginForm" style="display: none;">
-        <input type="email" id="email" placeholder="Email" value="admin@example.com">
-        <input type="password" id="password" placeholder="Пароль" value="admin123">
+        <input type="email" id="email" placeholder="Ваш email" autocomplete="email">
+        <input type="password" id="password" placeholder="Ваш пароль" autocomplete="current-password">
         <button class="btn" id="loginBtn">Войти как ученик</button>
         <button class="btn admin" id="adminLoginBtn">Войти как администратор</button>
 
         <div class="link">
-          <p>Нет аккаунта? <a href="/register.html">Регистрация</a></p>
+          <p>Нет аккаунта? <a href="/register.html">Зарегистрироваться</a></p>
           <p><a href="/reset.html">Забыли пароль?</a></p>
         </div>
       </div>
@@ -185,12 +184,12 @@
   </div>
 
   <script type="module">
-    // Конфигурация уже должна быть загружена мгновенно
     function showError(message) {
       const errorEl = document.getElementById('errorMessage');
       errorEl.textContent = message;
       errorEl.style.display = 'block';
       document.getElementById('successMessage').style.display = 'none';
+      document.getElementById('warningMessage').style.display = 'none';
       document.getElementById('loading').style.display = 'none';
     }
     
@@ -199,20 +198,38 @@
       successEl.textContent = message;
       successEl.style.display = 'block';
       document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('warningMessage').style.display = 'none';
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    function showWarning(message) {
+      const warningEl = document.getElementById('warningMessage');
+      warningEl.textContent = message;
+      warningEl.style.display = 'block';
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
       document.getElementById('loading').style.display = 'none';
     }
     
     function initApp() {
-      // Проверяем конфигурацию - она должна быть уже загружена
       if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-        showError('❌ Ошибка конфигурации');
+        showError('❌ Ошибка конфигурации системы');
         return;
       }
       
       document.getElementById('loginForm').style.display = 'block';
       document.getElementById('loading').style.display = 'none';
       
-      // Инициализируем Supabase
+      // Проверяем параметры URL для сообщений
+      const urlParams = new URLSearchParams(window.location.search);
+      const message = urlParams.get('message');
+      
+      if (message === 'confirmed') {
+        showSuccess('✅ Email успешно подтвержден! Теперь вы можете войти в систему.');
+      } else if (message === 'check_email') {
+        showWarning('📧 Проверьте вашу почту для подтверждения регистрации.');
+      }
+      
       import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm')
         .then(({ createClient }) => {
           const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
@@ -222,7 +239,7 @@
             if (user) {
               console.log('👤 Пользователь уже авторизован');
               // Редирект на профиль или админку
-              window.location.href = user.email === 'admin@example.com' ? '/admin.html' : '/profile.html';
+              checkUserRoleAndRedirect(user);
             }
           });
           
@@ -236,83 +253,127 @@
               login(supabase, false);
             }
           });
+
+          // Поддержка Enter в email поле
+          document.getElementById('email').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              document.getElementById('password').focus();
+            }
+          });
         })
         .catch(error => {
-          showError('❌ Ошибка загрузки Supabase: ' + error.message);
+          showError('❌ Ошибка загрузки системы: ' + error.message);
         });
     }
-    
-    async function login(supabase, isAdmin) {
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
 
-  if (!email || !password) {
-    showError('Введите email и пароль');
-    return;
-  }
-
-  try {
-    document.getElementById('loginBtn').disabled = true;
-    document.getElementById('adminLoginBtn').disabled = true;
-    showSuccess('🔐 Входим в систему...');
-    
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error) {
-      // Проверяем, не связано ли с неподтвержденным email
-      if (error.message.includes('Email not confirmed')) {
-        showError('❌ Email не подтвержден. Проверьте вашу почту и подтвердите регистрацию.');
-        
-        // Предлагаем отправить письмо повторно
-        const { error: resendError } = await supabase.auth.resend({
-          type: 'signup',
-          email: email
-        });
-        
-        if (!resendError) {
-          showWarning('📧 Письмо с подтверждением отправлено повторно. Проверьте вашу почту.');
-        }
-      } else {
-        throw error;
-      }
-      return;
-    }
-
-    // Проверяем подтверждение email
-    if (data.user && !data.user.email_confirmed_at) {
-      showError('❌ Email не подтвержден. Проверьте вашу почту.');
-      await supabase.auth.signOut();
-      return;
-    }
-
-    if (isAdmin) {
+    async function checkUserRoleAndRedirect(user) {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+      
       const { data: profile } = await supabase
         .from('profiles')
         .select('is_admin')
-        .eq('id', data.user.id)
+        .eq('id', user.id)
         .single();
         
       if (profile && profile.is_admin) {
         window.location.href = "/admin.html";
       } else {
-        showError('У вас нет прав администратора');
-        await supabase.auth.signOut();
+        window.location.href = "/profile.html";
       }
-    } else {
-      window.location.href = "/profile.html";
     }
-  } catch (error) {
-    showError('Ошибка входа: ' + error.message);
-    document.getElementById('loginBtn').disabled = false;
-    document.getElementById('adminLoginBtn').disabled = false;
-  }
-}
     
-    // Запускаем немедленно - конфигурация уже должна быть готова
+    async function login(supabase, isAdmin) {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError('Введите email и пароль');
+        return;
+      }
+
+      // Базовая валидация email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        showError('Неверный формат email');
+        return;
+      }
+
+      try {
+        document.getElementById('loginBtn').disabled = true;
+        document.getElementById('adminLoginBtn').disabled = true;
+        showWarning('🔐 Проверяем данные...');
+        
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        
+        if (error) {
+          // Проверяем различные типы ошибок
+          if (error.message.includes('Invalid login credentials')) {
+            showError('❌ Неверный email или пароль');
+          } else if (error.message.includes('Email not confirmed')) {
+            showError('❌ Email не подтвержден. Проверьте вашу почту и подтвердите регистрацию.');
+            
+            // Предлагаем отправить письмо повторно
+            const resend = confirm('Отправить письмо с подтверждением повторно?');
+            if (resend) {
+              const { error: resendError } = await supabase.auth.resend({
+                type: 'signup',
+                email: email
+              });
+              
+              if (!resendError) {
+                showSuccess('📧 Письмо с подтверждением отправлено повторно. Проверьте вашу почту.');
+              }
+            }
+          } else if (error.message.includes('rate limit')) {
+            showError('⚠️ Слишком много попыток. Попробуйте через несколько минут.');
+          } else {
+            throw error;
+          }
+          document.getElementById('loginBtn').disabled = false;
+          document.getElementById('adminLoginBtn').disabled = false;
+          return;
+        }
+
+        // Проверяем подтверждение email
+        if (data.user && !data.user.email_confirmed_at) {
+          showError('❌ Email не подтвержден. Проверьте вашу почту для завершения регистрации.');
+          await supabase.auth.signOut();
+          document.getElementById('loginBtn').disabled = false;
+          document.getElementById('adminLoginBtn').disabled = false;
+          return;
+        }
+
+        // Проверяем права администратора если нужно
+        if (isAdmin) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', data.user.id)
+            .single();
+            
+          if (profile && profile.is_admin) {
+            window.location.href = "/admin.html";
+          } else {
+            showError('❌ У вас нет прав администратора');
+            await supabase.auth.signOut();
+            document.getElementById('loginBtn').disabled = false;
+            document.getElementById('adminLoginBtn').disabled = false;
+          }
+        } else {
+          window.location.href = "/profile.html";
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showError('Ошибка входа: ' + error.message);
+        document.getElementById('loginBtn').disabled = false;
+        document.getElementById('adminLoginBtn').disabled = false;
+      }
+    }
+    
     if (window.SUPABASE_URL) {
       initApp();
     } else {
-      // Ждем событие конфигурации (максимум 1 секунду)
       const timeout = setTimeout(() => {
         showError('❌ Таймаут загрузки конфигурации');
       }, 1000);
