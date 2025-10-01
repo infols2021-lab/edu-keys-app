@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Админ — Edu Keys</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
   <style>
     .admin-container { width:95%; max-width:1200px; margin:20px auto; }
@@ -600,7 +599,7 @@
         
         const currentUser = adminCheck.user;
         let editingTaskId = null;
-        let currentQuestionType = 'mcq';
+        let currentQuestionType = 'mcq'; // ИСПРАВЛЕНО: правильная инициализация
         let questionCounter = 0;
         let searchTimeout = null;
 
@@ -631,14 +630,19 @@
         document.getElementById('createTaskBtn').addEventListener('click', showTaskForm);
         document.getElementById('cancelTaskBtn').addEventListener('click', hideTaskForm);
         document.getElementById('saveTaskBtn').addEventListener('click', saveTask);
-        document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
+        
+        // ИСПРАВЛЕНО: правильный обработчик для добавления вопроса
+        document.getElementById('addQuestionBtn').addEventListener('click', function() {
+          addQuestion(currentQuestionType); // Явно передаем текущий тип
+        });
 
-        // Типы вопросов
+        // Типы вопросов - ИСПРАВЛЕНО: правильное обновление currentQuestionType
         document.querySelectorAll('.type-btn').forEach(btn => {
           btn.addEventListener('click', function() {
             document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentQuestionType = this.getAttribute('data-type');
+            console.log('Тип вопроса изменен на:', currentQuestionType); // Для отладки
           });
         });
 
@@ -1284,6 +1288,15 @@
           editingTaskId = null;
           questionCounter = 0;
           
+          // ИСПРАВЛЕНО: сбрасываем тип вопроса на mcq при создании новой формы
+          currentQuestionType = 'mcq';
+          document.querySelectorAll('.type-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-type') === 'mcq') {
+              btn.classList.add('active');
+            }
+          });
+          
           // Очищаем вопросы
           const questionsContainer = document.getElementById('questionsContainer');
           questionsContainer.innerHTML = '';
@@ -1387,10 +1400,13 @@
           imageInput.value = '';
         }
         
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ: addQuestion теперь явно принимает тип
         function addQuestion(type = null) {
           const questionsContainer = document.getElementById('questionsContainer');
           const questionType = type || currentQuestionType;
           questionCounter++;
+          
+          console.log('Создаем вопрос типа:', questionType); // Для отладки
           
           const newQuestion = document.createElement('div');
           newQuestion.className = 'subtask-item';
