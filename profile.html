@@ -126,6 +126,82 @@
       display: none; 
     }
 
+    /* Стили для модального окна помощи */
+    .help-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+    .help-modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .help-modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .help-modal-tabs {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .help-tab {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      background: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .help-tab.active {
+      background: white;
+      color: var(--accent2);
+      border-bottom: 3px solid var(--accent2);
+    }
+    .help-tab-content {
+      display: none;
+      padding: 0;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    .help-tab-content.active {
+      display: block;
+    }
+    .help-image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .help-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 5px;
+    }
+    .help-close:hover {
+      color: #333;
+    }
+
     /* Мобильная оптимизация */
     @media (max-width: 768px) {
       body {
@@ -158,6 +234,19 @@
       .card {
         margin: 8px 0;
       }
+
+      .help-modal-content {
+        margin: 10px;
+        max-height: 85vh;
+      }
+      
+      .help-modal-tabs {
+        flex-direction: column;
+      }
+      
+      .help-tab {
+        padding: 12px;
+      }
     }
 
     @media (max-width: 480px) {
@@ -188,6 +277,26 @@
     Загружаем фон...
   </div>
 
+  <!-- Модальное окно помощи -->
+  <div class="help-modal" id="helpModal">
+    <div class="help-modal-content">
+      <div class="help-modal-header">
+        <h3 style="margin: 0; color: #333;">📚 Помощь по платформе</h3>
+        <button class="help-close" id="closeHelpModal">✕</button>
+      </div>
+      <div class="help-modal-tabs">
+        <button class="help-tab active" data-tab="registration">📝 Регистрация</button>
+        <button class="help-tab" data-tab="rules">📋 Правила</button>
+      </div>
+      <div class="help-tab-content active" id="registrationContent">
+        <img src="/images/registration-help.png" alt="Инструкция по регистрации" class="help-image" id="registrationImage">
+      </div>
+      <div class="help-tab-content" id="rulesContent">
+        <img src="/images/rules-help.png" alt="Правила платформы" class="help-image" id="rulesImage">
+      </div>
+    </div>
+  </div>
+
   <!-- Основной контент -->
   <div class="container">
     <div id="loading" class="loading">
@@ -208,6 +317,7 @@
         </div>
         <div class="nav">
           <button class="btn" onclick="location.href='/tasks.html'" style="background: linear-gradient(135deg, #ff9800, #f57c00);">📚 К заданиям</button>
+          <button class="btn" id="helpBtn" style="background: linear-gradient(135deg, #2196F3, #21CBF3);">❓ Помощь</button>
           <button class="btn secondary" id="logoutBtn" style="background: linear-gradient(135deg, #795548, #5d4037);">🚪 Выйти</button>
         </div>
       </div>
@@ -292,6 +402,68 @@
       document.getElementById('errorMessage').style.display = 'none';
     }
     
+    // ===== СИСТЕМА ПОМОЩИ =====
+    function initHelpSystem() {
+      const helpModal = document.getElementById('helpModal');
+      const helpBtn = document.getElementById('helpBtn');
+      const closeHelpBtn = document.getElementById('closeHelpModal');
+      const helpTabs = document.querySelectorAll('.help-tab');
+      const tabContents = document.querySelectorAll('.help-tab-content');
+      const registrationImage = document.getElementById('registrationImage');
+      const rulesImage = document.getElementById('rulesImage');
+      
+      // Обработчики ошибок загрузки изображений
+      registrationImage.onerror = function() {
+        this.style.display = 'none';
+        document.getElementById('registrationContent').innerHTML = '<div style="padding: 40px; text-align: center;"><h3>📝 Инструкция по регистрации</h3><p>Изображение временно недоступно</p></div>';
+      };
+      
+      rulesImage.onerror = function() {
+        this.style.display = 'none';
+        document.getElementById('rulesContent').innerHTML = '<div style="padding: 40px; text-align: center;"><h3>📋 Правила платформы</h3><p>Изображение временно недоступно</p></div>';
+      };
+      
+      // Открытие модального окна
+      helpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      });
+      
+      // Закрытие модального окна
+      closeHelpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'none';
+        document.body.style.overflow = '';
+      });
+      
+      // Закрытие по клику на фон
+      helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) {
+          helpModal.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+      });
+      
+      // Закрытие по Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && helpModal.style.display === 'flex') {
+          helpModal.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+      });
+      
+      // Переключение вкладок
+      helpTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          helpTabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          const tabName = tab.getAttribute('data-tab');
+          document.getElementById(`${tabName}Content`).classList.add('active');
+        });
+      });
+    }
+    
     // ===== ПРОСТАЯ СИСТЕМА ЗАГРУЗКИ ФОНА =====
     async function loadProfileBackground(supabase) {
       const backgroundLoading = document.getElementById('backgroundLoading');
@@ -312,7 +484,6 @@
         console.log('📋 Результат запроса фона:', { background, error });
 
         if (error) {
-          // Если нет активного фона или другая ошибка
           if (error.code === 'PGRST116') {
             console.log('ℹ️ Активный фон не найден, используем стандартный фон');
           } else {
@@ -325,11 +496,9 @@
         if (background && background.image_url) {
           console.log('✅ Найден активный фон:', background.file_name);
           
-          // Создаем изображение для предварительной загрузки
           const img = new Image();
           img.onload = function() {
             console.log('🖼️ Фон успешно загружен в память');
-            // Устанавливаем фон для body
             profileBody.style.backgroundImage = `url('${background.image_url}')`;
             
             console.log('✅ Фон профиля установлен:', background.file_name);
@@ -344,13 +513,12 @@
           console.log('📥 Загружаем изображение по URL:', background.image_url);
           img.src = background.image_url;
           
-          // Таймаут на случай долгой загрузки
           setTimeout(() => {
             if (backgroundLoading.style.display !== 'none') {
               console.log('⏰ Таймаут загрузки фона');
               backgroundLoading.style.display = 'none';
             }
-          }, 10000); // 10 секунд таймаут
+          }, 10000);
         } else {
           console.log('ℹ️ Активный фон не найден');
           backgroundLoading.style.display = 'none';
@@ -373,7 +541,6 @@
         
         const months = ["Сентябрь","Октябрь","Ноябрь","Декабрь","Январь","Февраль","Март"];
 
-        // Получаем текущий учебный месяц (1-7)
         function getStudyIndex() {
           const now = new Date();
           const month = now.getMonth() + 1;
@@ -392,18 +559,15 @@
             return; 
           }
 
-          // profile table
           const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
           document.getElementById('fullname').textContent = profile?.full_name || 'Ученик';
           document.getElementById('emailText').textContent = user.email;
           document.getElementById('attemptsCount').textContent = `📊 Попыток: ${profile?.attempts || 0}`;
 
-          // keys
           const { data: keys } = await supabase.from('keys').select('*').eq('user_id', user.id);
           const got = keys?.length || 0;
           document.getElementById('keysCount').textContent = `🗝️ Ключей: ${got}/7`;
 
-          // fill circles
           document.querySelectorAll('.key-circle').forEach(el => {
             const idx = parseInt(el.dataset.index, 10);
             const found = keys?.some(k => k.month_index === idx);
@@ -418,13 +582,11 @@
             }
           });
 
-          // months list + status
           const monthsContainer = document.getElementById('monthsList');
           monthsContainer.innerHTML = '';
           
           const currentMonthIndex = getStudyIndex();
           
-          // Получаем информацию о попытках для каждого месяца
           const { data: attempts } = await supabase.from('attempts').select('*, tasks!inner(month_index)').eq('user_id', user.id);
           
           for (let i = 1; i <= 7; i++) {
@@ -474,7 +636,8 @@
           }
         });
 
-        // Загружаем фон ДО показа контента
+        initHelpSystem();
+        
         await loadProfileBackground(supabase);
         
         await loadProfile();
@@ -487,11 +650,9 @@
       }
     }
     
-    // Конфигурация должна загружаться мгновенно
     if (window.SUPABASE_URL) {
       initApp();
     } else {
-      // Ждем событие конфигурации (максимум 1 секунду)
       const timeout = setTimeout(() => {
         showError('❌ Таймаут загрузки конфигурации');
       }, 1000);

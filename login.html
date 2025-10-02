@@ -19,6 +19,7 @@
     .login-container {
       width: 100%;
       max-width: 400px;
+      position: relative;
     }
     .login-card {
       background: #fff;
@@ -26,6 +27,7 @@
       border-radius: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
       text-align: center;
+      position: relative;
     }
     .login-card h2 {
       margin: 0 0 20px 0;
@@ -78,6 +80,14 @@
     }
     .btn.admin:hover {
       box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3);
+    }
+    .btn.help {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: auto;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, #2196F3, #21CBF3);
     }
     .link {
       margin-top: 20px;
@@ -137,6 +147,83 @@
       font-size: 13px;
       text-align: left;
     }
+
+    /* Стили для модального окна помощи */
+    .help-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+    .help-modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .help-modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .help-modal-tabs {
+      display: flex;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+    }
+    .help-tab {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      background: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .help-tab.active {
+      background: white;
+      color: var(--accent2);
+      border-bottom: 3px solid var(--accent2);
+    }
+    .help-tab-content {
+      display: none;
+      padding: 0;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    .help-tab-content.active {
+      display: block;
+    }
+    .help-image {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .help-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 5px;
+    }
+    .help-close:hover {
+      color: #333;
+    }
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -166,15 +253,56 @@
         padding: 14px 20px;
         font-size: 16px;
       }
+      .btn.help {
+        position: relative;
+        top: auto;
+        right: auto;
+        width: 100%;
+        margin-top: 10px;
+      }
+      
+      .help-modal-content {
+        margin: 10px;
+        max-height: 85vh;
+      }
+      
+      .help-modal-tabs {
+        flex-direction: column;
+      }
+      
+      .help-tab {
+        padding: 12px;
+      }
     }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
 <body>
+  <!-- Модальное окно помощи -->
+  <div class="help-modal" id="helpModal">
+    <div class="help-modal-content">
+      <div class="help-modal-header">
+        <h3 style="margin: 0; color: #333;">📚 Помощь по платформе</h3>
+        <button class="help-close" id="closeHelpModal">✕</button>
+      </div>
+      <div class="help-modal-tabs">
+        <button class="help-tab active" data-tab="registration">📝 Регистрация</button>
+        <button class="help-tab" data-tab="rules">📋 Правила</button>
+      </div>
+      <div class="help-tab-content active" id="registrationContent">
+        <img src="/images/registration-help.png" alt="Инструкция по регистрации" class="help-image" id="registrationImage">
+      </div>
+      <div class="help-tab-content" id="rulesContent">
+        <img src="/images/rules-help.png" alt="Правила платформы" class="help-image" id="rulesImage">
+      </div>
+    </div>
+  </div>
+
   <div class="login-container">
     <div class="login-card">
       <h2>Вход в Edu Keys</h2>
+      <button class="btn help" id="helpBtn">❓ Помощь</button>
       
       <div id="loading" class="loading">
         <div class="spinner"></div>
@@ -208,6 +336,68 @@
   </div>
 
   <script type="module">
+    // ===== СИСТЕМА ПОМОЩИ =====
+    function initHelpSystem() {
+      const helpModal = document.getElementById('helpModal');
+      const helpBtn = document.getElementById('helpBtn');
+      const closeHelpBtn = document.getElementById('closeHelpModal');
+      const helpTabs = document.querySelectorAll('.help-tab');
+      const tabContents = document.querySelectorAll('.help-tab-content');
+      const registrationImage = document.getElementById('registrationImage');
+      const rulesImage = document.getElementById('rulesImage');
+      
+      // Обработчики ошибок загрузки изображений
+      registrationImage.onerror = function() {
+        this.style.display = 'none';
+        document.getElementById('registrationContent').innerHTML = '<div style="padding: 40px; text-align: center;"><h3>📝 Инструкция по регистрации</h3><p>Изображение временно недоступно</p></div>';
+      };
+      
+      rulesImage.onerror = function() {
+        this.style.display = 'none';
+        document.getElementById('rulesContent').innerHTML = '<div style="padding: 40px; text-align: center;"><h3>📋 Правила платформы</h3><p>Изображение временно недоступно</p></div>';
+      };
+      
+      // Открытие модального окна
+      helpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      });
+      
+      // Закрытие модального окна
+      closeHelpBtn.addEventListener('click', () => {
+        helpModal.style.display = 'none';
+        document.body.style.overflow = '';
+      });
+      
+      // Закрытие по клику на фон
+      helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) {
+          helpModal.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+      });
+      
+      // Закрытие по Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && helpModal.style.display === 'flex') {
+          helpModal.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+      });
+      
+      // Переключение вкладок
+      helpTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          helpTabs.forEach(t => t.classList.remove('active'));
+          tabContents.forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          const tabName = tab.getAttribute('data-tab');
+          document.getElementById(`${tabName}Content`).classList.add('active');
+        });
+      });
+    }
+
     function showError(message) {
       const errorEl = document.getElementById('errorMessage');
       errorEl.textContent = message;
@@ -235,14 +425,11 @@
       document.getElementById('loading').style.display = 'none';
     }
 
-    // Функция для обработки подтверждения email через URL hash
     async function handleEmailConfirmation(supabase) {
-      // Проверяем hash в URL (Supabase использует hash fragment для токенов)
       if (window.location.hash) {
         try {
           showWarning('🔐 Обрабатываем подтверждение email...');
           
-          // Парсим hash параметры
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           const accessToken = hashParams.get('access_token');
           const refreshToken = hashParams.get('refresh_token');
@@ -251,7 +438,6 @@
           console.log('Hash params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
 
           if (type === 'signup' && accessToken) {
-            // Устанавливаем сессию с полученными токенами
             const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
@@ -262,17 +448,13 @@
             }
 
             if (data.user) {
-              // Проверяем, подтвержден ли email
               if (data.user.email_confirmed_at) {
                 showSuccess('✅ Email успешно подтвержден! Сейчас вы будете перенаправлены...');
                 
-                // Выходим из системы для безопасности
                 await supabase.auth.signOut();
                 
-                // Очищаем URL от hash параметров
                 window.history.replaceState(null, null, window.location.pathname + '?message=confirmed');
                 
-                // Перенаправляем через 3 секунды
                 setTimeout(() => {
                   window.location.href = '/login.html?message=confirmed';
                 }, 3000);
@@ -286,7 +468,6 @@
           console.error('Email confirmation error:', error);
           showError(`❌ Ошибка подтверждения email: ${error.message}`);
           
-          // Очищаем URL в случае ошибки
           window.history.replaceState(null, null, window.location.pathname);
           return false;
         }
@@ -303,20 +484,17 @@
       document.getElementById('loginForm').style.display = 'block';
       document.getElementById('loading').style.display = 'none';
       
-      // Проверяем параметры URL для сообщений
+      initHelpSystem();
+      
       const urlParams = new URLSearchParams(window.location.search);
       const message = urlParams.get('message');
       
       if (message === 'confirmed') {
         showSuccess('✅ Email успешно подтвержден! Теперь вы можете войти в систему.');
         
-        // Добавляем блок помощи
         const helpDiv = document.createElement('div');
         helpDiv.className = 'existing-account-help';
-        helpDiv.innerHTML = `
-          <strong>🎉 Отлично! Ваш аккаунт активирован.</strong><br>
-          Теперь вы можете войти в систему используя ваш email и пароль.
-        `;
+        helpDiv.innerHTML = '<strong>🎉 Отлично! Ваш аккаунт активирован.</strong><br>Теперь вы можете войти в систему используя ваш email и пароль.';
         document.getElementById('loginForm').insertBefore(helpDiv, document.getElementById('loginForm').firstChild);
       } else if (message === 'check_email') {
         showWarning('📧 Проверьте вашу почту для подтверждения регистрации.');
@@ -328,10 +506,8 @@
         .then(({ createClient }) => {
           const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
           
-          // Сначала обрабатываем подтверждение email, если есть hash в URL
           handleEmailConfirmation(supabase).then(handled => {
             if (!handled) {
-              // Если подтверждение не обрабатывалось, проверяем авторизацию
               supabase.auth.getUser().then(({ data: { user } }) => {
                 if (user) {
                   console.log('👤 Пользователь уже авторизован');
@@ -341,11 +517,9 @@
             }
           });
           
-          // Обработчики кнопок
           document.getElementById('loginBtn').addEventListener('click', () => login(supabase, false));
           document.getElementById('adminLoginBtn').addEventListener('click', () => login(supabase, true));
 
-          // Поддержка Enter для формы
           document.getElementById('password').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
               login(supabase, false);
@@ -389,7 +563,6 @@
         return;
       }
 
-      // Базовая валидация email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         showError('Неверный формат email');
@@ -404,7 +577,6 @@
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         
         if (error) {
-          // Улучшенная обработка ошибок входа
           console.error('Login error details:', error);
           
           if (error.message?.includes('Invalid login credentials') || error.code === 'invalid_credentials') {
@@ -436,7 +608,6 @@
           return;
         }
 
-        // Проверяем подтверждение email
         if (data.user && !data.user.email_confirmed_at) {
           showError('❌ Email не подтвержден. Проверьте вашу почту для завершения регистрации.');
           await supabase.auth.signOut();
@@ -445,7 +616,6 @@
           return;
         }
 
-        // Успешный вход
         if (isAdmin) {
           const { data: profile } = await supabase
             .from('profiles')
