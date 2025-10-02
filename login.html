@@ -19,7 +19,6 @@
     .login-container {
       width: 100%;
       max-width: 400px;
-      position: relative;
     }
     .login-card {
       background: #fff;
@@ -27,7 +26,6 @@
       border-radius: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
       text-align: center;
-      position: relative;
     }
     .login-card h2 {
       margin: 0 0 20px 0;
@@ -82,12 +80,8 @@
       box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3);
     }
     .btn.help {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: auto;
-      padding: 8px 12px;
       background: linear-gradient(135deg, #2196F3, #21CBF3);
+      margin-top: 15px;
     }
     .link {
       margin-top: 20px;
@@ -223,6 +217,11 @@
     .help-close:hover {
       color: #333;
     }
+    .image-loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
 
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -252,13 +251,6 @@
       .btn {
         padding: 14px 20px;
         font-size: 16px;
-      }
-      .btn.help {
-        position: relative;
-        top: auto;
-        right: auto;
-        width: 100%;
-        margin-top: 10px;
       }
       
       .help-modal-content {
@@ -291,10 +283,16 @@
         <button class="help-tab" data-tab="rules">📋 Правила</button>
       </div>
       <div class="help-tab-content active" id="registrationContent">
-        <img src="/images/registration-help.png" alt="Инструкция по регистрации" class="help-image" id="registrationImage">
+        <div class="image-loading">
+          <div class="spinner"></div>
+          <p>Загружаем инструкцию по регистрации...</p>
+        </div>
       </div>
       <div class="help-tab-content" id="rulesContent">
-        <img src="/images/rules-help.png" alt="Правила платформы" class="help-image" id="rulesImage">
+        <div class="image-loading">
+          <div class="spinner"></div>
+          <p>Загружаем правила платформы...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -302,7 +300,6 @@
   <div class="login-container">
     <div class="login-card">
       <h2>Вход в Edu Keys</h2>
-      <button class="btn help" id="helpBtn">❓ Помощь</button>
       
       <div id="loading" class="loading">
         <div class="spinner"></div>
@@ -330,37 +327,98 @@
         <div class="link">
           <p>Нет аккаунта? <a href="/register.html">Зарегистрироваться</a></p>
           <p><a href="/reset.html">Забыли пароль?</a></p>
+          <button class="btn help" id="helpBtn">❓ Помощь по платформе</button>
         </div>
       </div>
     </div>
   </div>
 
   <script type="module">
-    // ===== СИСТЕМА ПОМОЩИ =====
-    function initHelpSystem() {
+    // ===== СИСТЕМА ПОМОЩИ С ЗАГРУЗКОЙ ИЗ STORAGE =====
+    function initHelpSystem(supabase) {
       const helpModal = document.getElementById('helpModal');
       const helpBtn = document.getElementById('helpBtn');
       const closeHelpBtn = document.getElementById('closeHelpModal');
       const helpTabs = document.querySelectorAll('.help-tab');
       const tabContents = document.querySelectorAll('.help-tab-content');
-      const registrationImage = document.getElementById('registrationImage');
-      const rulesImage = document.getElementById('rulesImage');
       
-      // Обработчики ошибок загрузки изображений
-      registrationImage.onerror = function() {
-        this.style.display = 'none';
-        document.getElementById('registrationContent').innerHTML = '<div style="padding: 40px; text-align: center;"><h3>📝 Инструкция по регистрации</h3><p>Изображение временно недоступно</p></div>';
+      let helpImagesLoaded = {
+        registration: false,
+        rules: false
       };
-      
-      rulesImage.onerror = function() {
-        this.style.display = 'none';
-        document.getElementById('rulesContent').innerHTML = '<div style="padding: 40px; text-align: center;"><h3>📋 Правила платформы</h3><p>Изображение временно недоступно</p></div>';
-      };
-      
+
+      // Функция для получения публичного URL изображения из Storage
+      function getHelpImageUrl(imageName) {
+        return `${window.SUPABASE_URL}/storage/v1/object/public/help-images/${imageName}`;
+      }
+
+      // Функция загрузки изображения помощи
+      async function loadHelpImage(tabName, imageName) {
+        const contentDiv = document.getElementById(`${tabName}Content`);
+        
+        try {
+          const imageUrl = getHelpImageUrl(imageName);
+          
+          // Проверяем доступность изображения
+          const response = await fetch(imageUrl, { method: 'HEAD' });
+          
+          if (response.ok) {
+            const img = document.createElement('img');
+            img.className = 'help-image';
+            img.alt = tabName === 'registration' ? 'Инструкция по регистрации' : 'Правила платформы';
+            img.src = imageUrl;
+            
+            img.onload = () => {
+              contentDiv.innerHTML = '';
+              contentDiv.appendChild(img);
+              helpImagesLoaded[tabName] = true;
+            };
+            
+            img.onerror = () => {
+              showImageError(contentDiv, tabName);
+            };
+          } else {
+            showImageError(contentDiv, tabName);
+          }
+        } catch (error) {
+          console.error(`Ошибка загрузки изображения для ${tabName}:`, error);
+          showImageError(contentDiv, tabName);
+        }
+      }
+
+      // Функция показа ошибки загрузки изображения
+      function showImageError(contentDiv, tabName) {
+        const title = tabName === 'registration' ? '📝 Инструкция по регистрации' : '📋 Правила платформы';
+        const message = tabName === 'registration' 
+          ? 'Изображение инструкции временно недоступно. Обратитесь к администратору.'
+          : 'Изображение правил временно недоступно. Обратитесь к администратору.';
+        
+        contentDiv.innerHTML = `
+          <div style="padding: 40px; text-align: center;">
+            <h3>${title}</h3>
+            <p>${message}</p>
+            <p class="small-muted">Если проблема повторяется, свяжитесь с администратором: @skebobingg</p>
+          </div>
+        `;
+      }
+
+      // Загрузка изображений при открытии модального окна
+      async function loadHelpImages() {
+        if (!helpImagesLoaded.registration) {
+          await loadHelpImage('registration', 'registration-help.png');
+        }
+        if (!helpImagesLoaded.rules) {
+          await loadHelpImage('rules', 'rules-help.png');
+        }
+      }
+
       // Открытие модального окна
-      helpBtn.addEventListener('click', () => {
+      helpBtn.addEventListener('click', async () => {
         helpModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        
+        // Загружаем изображения при открытии
+        await loadHelpImages();
       });
       
       // Закрытие модального окна
@@ -387,13 +445,19 @@
       
       // Переключение вкладок
       helpTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
+        tab.addEventListener('click', async () => {
           helpTabs.forEach(t => t.classList.remove('active'));
           tabContents.forEach(c => c.classList.remove('active'));
           
           tab.classList.add('active');
           const tabName = tab.getAttribute('data-tab');
           document.getElementById(`${tabName}Content`).classList.add('active');
+          
+          // Загружаем изображение для активной вкладки, если еще не загружено
+          if (!helpImagesLoaded[tabName]) {
+            const imageName = tabName === 'registration' ? 'registration-help.png' : 'rules-help.png';
+            await loadHelpImage(tabName, imageName);
+          }
         });
       });
     }
@@ -484,8 +548,6 @@
       document.getElementById('loginForm').style.display = 'block';
       document.getElementById('loading').style.display = 'none';
       
-      initHelpSystem();
-      
       const urlParams = new URLSearchParams(window.location.search);
       const message = urlParams.get('message');
       
@@ -505,6 +567,9 @@
       import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm')
         .then(({ createClient }) => {
           const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+          
+          // Инициализируем систему помощи после загрузки Supabase
+          initHelpSystem(supabase);
           
           handleEmailConfirmation(supabase).then(handled => {
             if (!handled) {
