@@ -95,6 +95,20 @@
       display: none;
     }
 
+    /* Индикатор предзагрузки помощи */
+    .preload-status {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      z-index: 9999;
+      display: none;
+    }
+
     .loading { 
       text-align: center; 
       padding: 40px; 
@@ -235,6 +249,12 @@
         font-size: 10px;
         padding: 6px 10px;
       }
+
+      .preload-status {
+        bottom: 10px;
+        right: 10px;
+        font-size: 10px;
+      }
       
       .card {
         margin: 8px 0;
@@ -280,6 +300,12 @@
   <div class="background-loading" id="backgroundLoading">
     <span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; vertical-align: middle; margin-right: 5px;"></span>
     Загружаем фон...
+  </div>
+
+  <!-- Индикатор предзагрузки помощи -->
+  <div class="preload-status" id="preloadStatus">
+    <span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; vertical-align: middle; margin-right: 5px;"></span>
+    Предзагружаем помощь...
   </div>
 
   <!-- Модальное окно помощи -->
@@ -413,15 +439,23 @@
       document.getElementById('errorMessage').style.display = 'none';
     }
     
-    // ===== СИСТЕМА ПОМОЩИ С ЗАГРУЗКОЙ ИЗ STORAGE =====
+    // ===== УЛУЧШЕННАЯ СИСТЕМА ПОМОЩИ С ПРЕДЗАГРУЗКОЙ =====
     function initHelpSystem(supabase) {
       const helpModal = document.getElementById('helpModal');
       const helpBtn = document.getElementById('helpBtn');
       const closeHelpBtn = document.getElementById('closeHelpModal');
       const helpTabs = document.querySelectorAll('.help-tab');
       const tabContents = document.querySelectorAll('.help-tab-content');
+      const preloadStatus = document.getElementById('preloadStatus');
       
-      let helpImagesLoaded = {
+      // Объект для хранения предзагруженных изображений
+      const preloadedImages = {
+        registration: null,
+        rules: null
+      };
+
+      // Статусы загрузки
+      let imagesLoaded = {
         registration: false,
         rules: false
       };
@@ -431,38 +465,84 @@
         return `${window.SUPABASE_URL}/storage/v1/object/public/help-images/${imageName}`;
       }
 
-      // Функция загрузки изображения помощи
-      async function loadHelpImage(tabName, imageName) {
+      // Функция предзагрузки изображений
+      async function preloadHelpImages() {
+        preloadStatus.style.display = 'block';
+        console.log('🔄 Начинаем предзагрузку изображений помощи...');
+
+        const imagesToPreload = [
+          { name: 'registration', url: 'registration-help.png' },
+          { name: 'rules', url: 'rules-help.png' }
+        ];
+
+        const preloadPromises = imagesToPreload.map(({ name, url }) => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              preloadedImages[name] = img;
+              imagesLoaded[name] = true;
+              console.log(`✅ Предзагружено: ${name}`);
+              updatePreloadStatus();
+              resolve(name);
+            };
+            img.onerror = () => {
+              console.warn(`❌ Не удалось предзагрузить: ${name}`);
+              updatePreloadStatus();
+              resolve(name);
+            };
+            img.src = getHelpImageUrl(url);
+          });
+        });
+
+        await Promise.allSettled(preloadPromises);
+        
+        // Скрываем индикатор через 2 секунды
+        setTimeout(() => {
+          preloadStatus.style.display = 'none';
+        }, 2000);
+      }
+
+      // Обновление статуса предзагрузки
+      function updatePreloadStatus() {
+        const loadedCount = Object.values(imagesLoaded).filter(Boolean).length;
+        const totalCount = Object.keys(imagesLoaded).length;
+        preloadStatus.innerHTML = `
+          <span class="spinner" style="width: 16px; height: 16px; border-width: 2px; display: inline-block; vertical-align: middle; margin-right: 5px;"></span>
+          Помощь: ${loadedCount}/${totalCount}
+        `;
+      }
+
+      // Функция загрузки изображения помощи (использует предзагруженные)
+      function loadHelpImage(tabName) {
         const contentDiv = document.getElementById(`${tabName}Content`);
         
-        try {
-          const imageUrl = getHelpImageUrl(imageName);
-          
-          // Проверяем доступность изображения
-          const response = await fetch(imageUrl, { method: 'HEAD' });
-          
-          if (response.ok) {
-            const img = document.createElement('img');
-            img.className = 'help-image';
-            img.alt = tabName === 'registration' ? 'Инструкция по регистрации' : 'Правила платформы';
-            img.src = imageUrl;
-            
-            img.onload = () => {
-              contentDiv.innerHTML = '';
-              contentDiv.appendChild(img);
-              helpImagesLoaded[tabName] = true;
-            };
-            
-            img.onerror = () => {
-              showImageError(contentDiv, tabName);
-            };
-          } else {
-            showImageError(contentDiv, tabName);
-          }
-        } catch (error) {
-          console.error(`Ошибка загрузки изображения для ${tabName}:`, error);
-          showImageError(contentDiv, tabName);
+        // Если изображение уже предзагружено, используем его
+        if (imagesLoaded[tabName] && preloadedImages[tabName]) {
+          contentDiv.innerHTML = '';
+          const img = preloadedImages[tabName].cloneNode();
+          img.className = 'help-image';
+          img.alt = tabName === 'registration' ? 'Инструкция по регистрации' : 'Правила платформы';
+          contentDiv.appendChild(img);
+          return;
         }
+
+        // Fallback: загружаем обычным способом
+        const imageName = tabName === 'registration' ? 'registration-help.png' : 'rules-help.png';
+        const imageUrl = getHelpImageUrl(imageName);
+        
+        const img = document.createElement('img');
+        img.className = 'help-image';
+        img.alt = tabName === 'registration' ? 'Инструкция по регистрации' : 'Правила платформы';
+        img.src = imageUrl;
+        
+        img.onload = () => {
+          contentDiv.innerHTML = '';
+          contentDiv.appendChild(img);
+        };
+        
+        img.onerror = () => {
+          showImageError(contentDiv, tabName);
+        };
       }
 
       // Функция показа ошибки загрузки изображения
@@ -481,23 +561,14 @@
         `;
       }
 
-      // Загрузка изображений при открытии модального окна
-      async function loadHelpImages() {
-        if (!helpImagesLoaded.registration) {
-          await loadHelpImage('registration', 'registration-help.png');
-        }
-        if (!helpImagesLoaded.rules) {
-          await loadHelpImage('rules', 'rules-help.png');
-        }
-      }
-
       // Открытие модального окна
       helpBtn.addEventListener('click', async () => {
         helpModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         
-        // Загружаем изображения при открытии
-        await loadHelpImages();
+        // Показываем предзагруженные изображения
+        loadHelpImage('registration');
+        loadHelpImage('rules');
       });
       
       // Закрытие модального окна
@@ -524,21 +595,18 @@
       
       // Переключение вкладок
       helpTabs.forEach(tab => {
-        tab.addEventListener('click', async () => {
+        tab.addEventListener('click', () => {
           helpTabs.forEach(t => t.classList.remove('active'));
           tabContents.forEach(c => c.classList.remove('active'));
           
           tab.classList.add('active');
           const tabName = tab.getAttribute('data-tab');
           document.getElementById(`${tabName}Content`).classList.add('active');
-          
-          // Загружаем изображение для активной вкладки, если еще не загружено
-          if (!helpImagesLoaded[tabName]) {
-            const imageName = tabName === 'registration' ? 'registration-help.png' : 'rules-help.png';
-            await loadHelpImage(tabName, imageName);
-          }
         });
       });
+
+      // Запускаем предзагрузку при инициализации
+      preloadHelpImages();
     }
     
     // ===== ПРОСТАЯ СИСТЕМА ЗАГРУЗКИ ФОНА =====
@@ -713,7 +781,7 @@
           }
         });
 
-        // Инициализируем систему помощи после загрузки Supabase
+        // Инициализируем систему помощи с предзагрузкой
         initHelpSystem(supabase);
         
         await loadProfileBackground(supabase);
