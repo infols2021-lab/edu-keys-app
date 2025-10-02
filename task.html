@@ -19,10 +19,96 @@
     .fill-input:focus { border-color: var(--accent2); outline: none; }
     .fill-label { display: block; margin-top: 15px; font-weight: 600; }
     .attempt-warning { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #856404; }
-    .timer { background: var(--accent2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-left: 10px; }
-    .timer.warning { background: var(--accent); animation: pulse 1s infinite; }
-    .timer.danger { background: #e74c3c; animation: pulse 0.5s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    
+    /* ОБНОВЛЕННЫЕ СТИЛИ ТАЙМЕРА - ФИКСИРОВАННЫЙ ВВЕРХУ */
+    .fixed-timer-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 2px solid var(--accent2);
+      padding: 10px 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+    }
+    
+    .timer-main {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .timer-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .timer {
+      background: var(--accent2);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      min-width: 80px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .timer.warning { 
+      background: var(--accent);
+      animation: pulse 1s infinite;
+      box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+    }
+    
+    .timer.danger { 
+      background: #e74c3c;
+      animation: pulse 0.5s infinite;
+      box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+    }
+    
+    .timer-label {
+      font-weight: 600;
+      color: #333;
+      font-size: 14px;
+    }
+    
+    .timer-progress {
+      flex: 1;
+      height: 6px;
+      background: #f0f0f0;
+      border-radius: 3px;
+      overflow: hidden;
+      max-width: 200px;
+    }
+    
+    .timer-progress-bar {
+      height: 100%;
+      background: var(--accent2);
+      transition: width 1s linear, background-color 0.3s;
+    }
+    
+    .timer-progress-bar.warning { background: var(--accent); }
+    .timer-progress-bar.danger { background: #e74c3c; }
+    
+    @keyframes pulse { 
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); } 
+    }
+    
     .disabled { opacity: 0.6; pointer-events: none; }
     .loading { text-align: center; padding: 40px; }
     .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent2); border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto 20px; }
@@ -92,11 +178,83 @@
       color: #666;
       margin-top: 5px;
     }
+
+    /* Дополнительные отступы для контента под фиксированным таймером */
+    body.with-fixed-timer {
+      padding-top: 70px;
+    }
+
+    /* Мобильная адаптация для фиксированного таймера */
+    @media (max-width: 768px) {
+      .fixed-timer-container {
+        padding: 8px 15px;
+      }
+      
+      .timer-main {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+      }
+      
+      .timer-info {
+        justify-content: space-between;
+      }
+      
+      .timer {
+        font-size: 14px;
+        padding: 6px 12px;
+        min-width: 70px;
+      }
+      
+      .timer-progress {
+        max-width: none;
+      }
+      
+      body.with-fixed-timer {
+        padding-top: 90px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .fixed-timer-container {
+        padding: 6px 10px;
+      }
+      
+      .timer {
+        font-size: 13px;
+        padding: 5px 10px;
+        min-width: 60px;
+      }
+      
+      .timer-label {
+        font-size: 12px;
+      }
+      
+      body.with-fixed-timer {
+        padding-top: 100px;
+      }
+    }
   </style>
   
   <script src="/load-config.js"></script>
 </head>
 <body>
+  <!-- ФИКСИРОВАННЫЙ ТАЙМЕР ВВЕРХУ ЭКРАНА -->
+  <div class="fixed-timer-container" id="fixedTimer">
+    <div class="timer-main">
+      <div class="timer-info">
+        <span class="timer-label">⏱️ Осталось времени:</span>
+        <div class="timer" id="timer">00:00</div>
+      </div>
+      <div class="timer-progress">
+        <div class="timer-progress-bar" id="timerProgressBar"></div>
+      </div>
+      <div class="timer-info">
+        <span class="timer-label" id="timerStatus">Время идет...</span>
+      </div>
+    </div>
+  </div>
+
   <div id="configLoading" class="config-loading">
     <div class="spinner"></div>
     <p>🔄 Загружаем конфигурацию...</p>
@@ -136,9 +294,8 @@
         
         <div id="taskBody" class="task-content"></div>
         
-        <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center;">
+        <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
           <button id="submitBtn" class="btn" style="display: none;">Отправить ответ</button>
-          <div id="timer" class="timer" style="display: none;">00:00</div>
           <button class="btn secondary" onclick="location.href='/tasks.html'">Назад к заданиям</button>
         </div>
       </div>
@@ -189,12 +346,16 @@
         let startTime = null;
         let timerInterval = null;
         let timeLimit = 60;
+        let totalTime = 0;
 
         const submitBtn = document.getElementById('submitBtn');
         const taskBody = document.getElementById('taskBody');
         const attemptWarning = document.getElementById('attemptWarning');
         const timeInfo = document.getElementById('timeInfo');
         const timerElement = document.getElementById('timer');
+        const timerProgressBar = document.getElementById('timerProgressBar');
+        const timerStatus = document.getElementById('timerStatus');
+        const fixedTimer = document.getElementById('fixedTimer');
         const taskLoadingElement = document.getElementById('taskLoading');
         const completedMessage = document.getElementById('completedMessage');
         const completedText = document.getElementById('completedText');
@@ -215,15 +376,23 @@
         function startCountdown() {
           if (!startTime) return;
           
+          totalTime = timeLimit * 60; // общее время в секундах
+          
           function updateTimer() {
             const now = new Date();
             const elapsed = Math.floor((now - startTime) / 1000);
-            const remaining = timeLimit * 60 - elapsed;
+            const remaining = totalTime - elapsed;
+            
+            // Обновляем прогресс-бар
+            const progressPercent = (remaining / totalTime) * 100;
+            timerProgressBar.style.width = `${progressPercent}%`;
             
             if (remaining <= 0) {
               clearInterval(timerInterval);
               timerElement.textContent = "00:00";
               timerElement.className = "timer danger";
+              timerProgressBar.className = "timer-progress-bar danger";
+              timerStatus.textContent = "⏰ Время вышло!";
               submitBtn.disabled = true;
               submitBtn.textContent = "Время вышло!";
               attemptWarning.innerHTML = '<strong>⏰ Время вышло!</strong> Задание автоматически отправлено.';
@@ -233,16 +402,42 @@
               const seconds = remaining % 60;
               timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
               
-              if (remaining < 300) {
+              // Обновляем статус и цвета в зависимости от оставшегося времени
+              if (remaining < 60) {
+                // Меньше 1 минуты
                 timerElement.className = "timer danger";
+                timerProgressBar.className = "timer-progress-bar danger";
+                timerStatus.textContent = "⚡ ОЧЕНЬ МАЛО ВРЕМЕНИ!";
+              } else if (remaining < 300) {
+                // Меньше 5 минут
+                timerElement.className = "timer danger";
+                timerProgressBar.className = "timer-progress-bar danger";
+                timerStatus.textContent = "🔥 Спешите! Меньше 5 минут";
               } else if (remaining < 600) {
+                // Меньше 10 минут
                 timerElement.className = "timer warning";
+                timerProgressBar.className = "timer-progress-bar warning";
+                timerStatus.textContent = "⏳ Время заканчивается";
+              } else {
+                timerElement.className = "timer";
+                timerProgressBar.className = "timer-progress-bar";
+                timerStatus.textContent = "⏱️ Время идет...";
               }
             }
           }
           
           timerInterval = setInterval(updateTimer, 1000);
           updateTimer();
+        }
+
+        function showFixedTimer() {
+          fixedTimer.style.display = 'flex';
+          document.body.classList.add('with-fixed-timer');
+        }
+
+        function hideFixedTimer() {
+          fixedTimer.style.display = 'none';
+          document.body.classList.remove('with-fixed-timer');
         }
 
         async function autoSubmit() {
@@ -294,6 +489,7 @@
               submitBtn.style.display = 'none';
               completedMessage.style.display = 'block';
               completedText.textContent = result.message || '⏰ Время вышло! Задание автоматически отправлено.';
+              hideFixedTimer();
             }
           } catch (e) {
             console.error('Auto-submission error:', e);
@@ -331,8 +527,9 @@
             submitBtn.style.display = 'inline-block';
             attemptWarning.style.display = 'block';
             attemptWarning.innerHTML = '<strong>⚠️ Внимание!</strong> Вы начали выполнение задания. Попытка списана. Следите за временем!';
-            timerElement.style.display = 'inline-block';
             
+            // ПОКАЗЫВАЕМ ФИКСИРОВАННЫЙ ТАЙМЕР
+            showFixedTimer();
             startCountdown();
             renderTask();
             return true;
@@ -360,6 +557,7 @@
             taskBody.style.display = 'none';
             submitBtn.style.display = 'none';
             completedMessage.style.display = 'block';
+            hideFixedTimer();
             
             if (attempt.score === -1) {
               completedText.textContent = 'Вы начали это задание, но не завершили его. Попытка считается использованной. Для повторной попытки обратитесь к администратору в Telegram: @skebobingg';
@@ -640,6 +838,7 @@
             }
 
             clearInterval(timerInterval);
+            hideFixedTimer();
 
             const result = Array.isArray(data) ? data[0] : data;
             
