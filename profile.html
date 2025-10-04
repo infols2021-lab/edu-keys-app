@@ -439,7 +439,7 @@
       document.getElementById('errorMessage').style.display = 'none';
     }
     
-    // ===== УЛУЧШЕННАЯ СИСТЕМА ПОМОЩИ С ПРЕДЗАГРУЗКОЙ =====
+    // ===== УЛУЧШЕННАЯ СИСТЕМА ПОМОЩИ С ПРЕДЗАГРУЗКОЙ И ОБХОДОМ КЭША =====
     function initHelpSystem(supabase) {
       const helpModal = document.getElementById('helpModal');
       const helpBtn = document.getElementById('helpBtn');
@@ -460,9 +460,11 @@
         rules: false
       };
 
-      // Функция для получения публичного URL изображения из Storage
+      // Функция для получения публичного URL изображения из Storage С ПАРАМЕТРОМ ВЕРСИИ
       function getHelpImageUrl(imageName) {
-        return `${window.SUPABASE_URL}/storage/v1/object/public/help-images/${imageName}`;
+        // Добавляем параметр версии чтобы избежать кэширования
+        const version = new Date().getTime(); // timestamp в миллисекундах
+        return `${window.SUPABASE_URL}/storage/v1/object/public/help-images/${imageName}?v=${version}`;
       }
 
       // Функция предзагрузки изображений
@@ -487,9 +489,10 @@
             };
             img.onerror = () => {
               console.warn(`❌ Не удалось предзагрузить: ${name}`);
-              updatePreloadStatus();
-              resolve(name);
+              // Пробуем загрузить без кэша
+              loadWithoutCache(name, url).then(resolve);
             };
+            // ДОБАВЛЯЕМ ПАРАМЕТР ВЕРСИИ ДЛЯ ОБХОДА КЭША
             img.src = getHelpImageUrl(url);
           });
         });
@@ -500,6 +503,28 @@
         setTimeout(() => {
           preloadStatus.style.display = 'none';
         }, 2000);
+      }
+
+      // Дополнительная функция для загрузки без кэша
+      async function loadWithoutCache(tabName, imageName) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            preloadedImages[tabName] = img;
+            imagesLoaded[tabName] = true;
+            console.log(`✅ Загружено без кэша: ${tabName}`);
+            updatePreloadStatus();
+            resolve(tabName);
+          };
+          img.onerror = () => {
+            console.warn(`❌ Окончательно не удалось загрузить: ${tabName}`);
+            updatePreloadStatus();
+            resolve(tabName);
+          };
+          // Используем другой параметр для обхода кэша
+          const timestamp = new Date().getTime();
+          img.src = `${window.SUPABASE_URL}/storage/v1/object/public/help-images/${imageName}?timestamp=${timestamp}&nocache=${Math.random()}`;
+        });
       }
 
       // Обновление статуса предзагрузки
@@ -526,14 +551,15 @@
           return;
         }
 
-        // Fallback: загружаем обычным способом
+        // Fallback: загружаем обычным способом с обходом кэша
         const imageName = tabName === 'registration' ? 'registration-help.png' : 'rules-help.png';
-        const imageUrl = getHelpImageUrl(imageName);
         
         const img = document.createElement('img');
         img.className = 'help-image';
         img.alt = tabName === 'registration' ? 'Инструкция по регистрации' : 'Правила платформы';
-        img.src = imageUrl;
+        
+        // ДОБАВЛЯЕМ ПАРАМЕТР ДЛЯ ОБХОДА КЭША
+        img.src = getHelpImageUrl(imageName);
         
         img.onload = () => {
           contentDiv.innerHTML = '';
