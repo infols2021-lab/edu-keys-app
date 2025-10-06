@@ -43,6 +43,7 @@
     .mcq-type { background: #e3f2fd; color: #1976d2; }
     .fill-type { background: #f3e5f5; color: #7b1fa2; }
     .mixed-type { background: #e8f5e8; color: #2e7d32; }
+    .demo-type { background: #fff3cd; color: #856404; }
     .loading { 
       text-align: center; 
       padding: 40px; 
@@ -168,6 +169,25 @@
       font-size: 12px;
       color: #666;
       margin-top: 5px;
+    }
+
+    /* Демо задания */
+    .demo-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .demo-checkbox input {
+      width: auto;
+    }
+    .demo-info {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-size: 14px;
     }
 
     /* Адаптивность для админ-панели */
@@ -435,6 +455,7 @@
             <span class="task-type-indicator mcq-type">📝 Тест</span>
             <span class="task-type-indicator fill-type">✍️ Письменный</span>
             <span class="task-type-indicator mixed-type">📝+✍️ Смешанный</span>
+            <span class="task-type-indicator demo-type">📚 Демо</span>
           </div>
         </div>
       </div>
@@ -473,6 +494,7 @@
           <h2>Управление заданиями</h2>
           <div class="admin-controls">
             <button class="btn" id="createTaskBtn">➕ Создать задание</button>
+            <button class="btn" id="createDemoTaskBtn">📚 Создать демо-задание</button>
           </div>
           <div style="overflow-x: auto;">
             <table class="admin-table" id="tasksTable">
@@ -481,6 +503,7 @@
                   <th>Название</th>
                   <th>Месяц</th>
                   <th>Тип</th>
+                  <th>Демо</th>
                   <th>Лимит времени</th>
                   <th>Проходной балл</th>
                   <th>Действия</th>
@@ -497,6 +520,15 @@
           <div class="form-group">
             <label>Название задания:</label>
             <input type="text" id="taskTitle" class="input" placeholder="Введите название">
+          </div>
+          
+          <div class="demo-checkbox">
+            <input type="checkbox" id="taskIsDemo">
+            <label for="taskIsDemo"><strong>📚 Это демо-задание</strong></label>
+          </div>
+          <div class="demo-info" id="demoInfo" style="display: none;">
+            💡 <strong>Демо-задание</strong> - это пример задания с уже вписанными ответами. 
+            Ученики могут просматривать его для обучения, но баллы за него не начисляются.
           </div>
           
           <div class="form-group">
@@ -528,6 +560,7 @@
             <div class="question-type-selector">
               <div class="type-btn active" data-type="mcq">📝 Тестовый вопрос</div>
               <div class="type-btn" data-type="fill">✍️ Вписать ответ</div>
+              <div class="type-btn" data-type="demo">📚 Демо-вопрос</div>
             </div>
             <div id="questionsContainer">
               <!-- Вопросы будут добавляться сюда динамически -->
@@ -693,12 +726,18 @@
         });
 
         // Управление заданиями
-        document.getElementById('createTaskBtn').addEventListener('click', showTaskForm);
+        document.getElementById('createTaskBtn').addEventListener('click', () => showTaskForm(false));
+        document.getElementById('createDemoTaskBtn').addEventListener('click', () => showTaskForm(true));
         document.getElementById('cancelTaskBtn').addEventListener('click', hideTaskForm);
         document.getElementById('saveTaskBtn').addEventListener('click', saveTask);
         
         document.getElementById('addQuestionBtn').addEventListener('click', function() {
           addQuestion(currentQuestionType);
+        });
+
+        // Демо-чекбокс
+        document.getElementById('taskIsDemo').addEventListener('change', function() {
+          document.getElementById('demoInfo').style.display = this.checked ? 'block' : 'none';
         });
 
         // Типы вопросов
@@ -752,12 +791,35 @@
           }
         }
         
+        // Функция удаления изображения из Supabase Storage
+        async function deleteQuestionImage(imageUrl) {
+          try {
+            if (!imageUrl) return;
+            
+            // Извлекаем имя файла из URL
+            const fileName = imageUrl.split('/').pop();
+            if (!fileName) return;
+            
+            const { error } = await supabase.storage
+              .from('task-images')
+              .remove([`questions/${fileName}`]);
+            
+            if (error) {
+              console.warn('Не удалось удалить изображение из Storage:', error);
+            } else {
+              console.log('✅ Изображение удалено из Storage:', fileName);
+            }
+          } catch (error) {
+            console.error('Ошибка удаления изображения:', error);
+          }
+        }
+        
         // Функция для загрузки статистики
         async function loadStats() {
           try {
             const { data: tasks, error: tasksError } = await supabase
               .from('tasks')
-              .select('id, content');
+              .select('id, content, is_demo');
             
             const { data: users, error: usersError } = await supabase
               .from('profiles')
@@ -768,7 +830,10 @@
               .select('id');
 
             if (!tasksError && !usersError && !backgroundsError) {
-              document.getElementById('totalTasks').textContent = `Заданий: ${tasks.length}`;
+              const regularTasks = tasks.filter(t => !t.is_demo).length;
+              const demoTasks = tasks.filter(t => t.is_demo).length;
+              
+              document.getElementById('totalTasks').textContent = `Заданий: ${regularTasks} + ${demoTasks} демо`;
               document.getElementById('totalUsers').textContent = `Пользователей: ${users.length}`;
               document.getElementById('totalBackgrounds').textContent = `Фонов: ${backgrounds?.length || 0}`;
             }
@@ -1243,7 +1308,7 @@
           
           if (!data || data.length === 0) {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td colspan="6" style="text-align:center;padding:20px;">Задания не найдены</td>`;
+            tr.innerHTML = `<td colspan="7" style="text-align:center;padding:20px;">Задания не найдены</td>`;
             tbody.appendChild(tr);
             return;
           }
@@ -1254,10 +1319,14 @@
             const questionTypes = task.content?.questions?.map(q => q.type) || [];
             const hasMcq = questionTypes.includes('mcq');
             const hasFill = questionTypes.includes('fill');
+            const hasDemo = questionTypes.includes('demo') || task.is_demo;
             
             let typeText = '';
             let typeClass = '';
-            if (hasMcq && hasFill) {
+            if (hasDemo) {
+              typeText = '📚';
+              typeClass = 'demo-type';
+            } else if (hasMcq && hasFill) {
               typeText = '📝+✍️';
               typeClass = 'mixed-type';
             } else if (hasMcq) {
@@ -1278,6 +1347,7 @@
               <td>
                 <span class="task-type-indicator ${typeClass}">${typeText}</span>
               </td>
+              <td>${task.is_demo ? '✅' : '❌'}</td>
               <td>${task.time_limit || 60} мин</td>
               <td>${task.passing_score}%</td>
               <td>
@@ -1304,13 +1374,15 @@
           });
         }
         
-        function showTaskForm() {
+        function showTaskForm(isDemo = false) {
           document.getElementById('taskFormCard').style.display = 'block';
-          document.getElementById('formTitle').textContent = 'Создать задание';
+          document.getElementById('formTitle').textContent = isDemo ? 'Создать демо-задание' : 'Создать задание';
           document.getElementById('taskTitle').value = '';
           document.getElementById('taskMonth').value = '1';
           document.getElementById('taskTimeLimit').value = '60';
           document.getElementById('taskPassingScore').value = '80';
+          document.getElementById('taskIsDemo').checked = isDemo;
+          document.getElementById('demoInfo').style.display = isDemo ? 'block' : 'none';
           editingTaskId = null;
           
           currentQuestionType = 'mcq';
@@ -1408,14 +1480,20 @@
           const imageUrlInput = document.getElementById(`imageUrl${questionId}`);
           const imageInput = document.getElementById(`imageInput${questionId}`);
           
+          // Удаляем изображение из Storage
+          const imageUrl = imageUrlInput.value;
+          if (imageUrl) {
+            deleteQuestionImage(imageUrl);
+          }
+          
           preview.style.display = 'none';
           removeBtn.style.display = 'none';
           uploadArea.style.display = 'block';
           imageUrlInput.value = '';
           imageInput.value = '';
           
-          // Также очищаем файл в input
-          imageInput.type = 'file'; // Это сбросит значение
+          // Сбрасываем input file
+          imageInput.type = 'file';
         }
         
         // Функция для добавления нового поля ввода в fill-вопросе
@@ -1454,12 +1532,12 @@
         function addQuestion(type = null) {
           const questionsContainer = document.getElementById('questionsContainer');
           const questionType = type || currentQuestionType;
-          const questionId = generateQuestionId(); // Генерируем уникальный ID для вопроса
+          const questionId = generateQuestionId();
           
           const newQuestion = document.createElement('div');
           newQuestion.className = 'subtask-item';
           newQuestion.setAttribute('data-type', questionType);
-          newQuestion.setAttribute('data-id', questionId); // Сохраняем ID в атрибуте
+          newQuestion.setAttribute('data-id', questionId);
           
           if (questionType === 'mcq') {
             newQuestion.innerHTML = `
@@ -1489,9 +1567,9 @@
                 <label>Правильный ответ (номер варианта, начиная с 1):</label>
                 <input type="number" class="input mcq-correct" min="1" value="1">
               </div>
-              <button class="btn btn-small btn-danger remove-question">Удалить вопрос</button>
+              <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
             `;
-          } else {
+          } else if (questionType === 'fill') {
             newQuestion.innerHTML = `
               <div class="form-group">
                 <label>Текст вопроса:</label>
@@ -1522,7 +1600,37 @@
                 <div class="input-count">Количество полей: 1</div>
                 <button type="button" class="btn btn-small add-fill-input">+ Добавить поле</button>
               </div>
-              <button class="btn btn-small btn-danger remove-question">Удалить вопрос</button>
+              <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
+            `;
+          } else if (questionType === 'demo') {
+            newQuestion.innerHTML = `
+              <div class="form-group">
+                <label>Текст демо-вопроса:</label>
+                <input type="text" class="input question-text" placeholder="Введите вопрос для примера">
+              </div>
+              <div class="form-group">
+                <label>Изображение для демо-вопроса (опционально):</label>
+                <div class="upload-area" id="uploadArea${questionId}">
+                  <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
+                  <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
+                  <input type="file" id="imageInput${questionId}" style="display:none" accept="image/*">
+                </div>
+                <div class="upload-progress" id="progress${questionId}">
+                  <div class="upload-progress-bar" id="progressBar${questionId}"></div>
+                </div>
+                <input type="hidden" class="input question-image" id="imageUrl${questionId}">
+                <img class="image-preview" id="imagePreview${questionId}" alt="Предпросмотр изображения">
+                <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
+              </div>
+              <div class="form-group">
+                <label>Пример правильного ответа (будет показан ученикам):</label>
+                <input type="text" class="input demo-answer" placeholder="Введите пример правильного ответа">
+              </div>
+              <div class="form-group">
+                <label>Объяснение ответа (опционально):</label>
+                <textarea class="input demo-explanation" placeholder="Объясните, почему это правильный ответ" rows="3"></textarea>
+              </div>
+              <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
             `;
           }
           
@@ -1533,11 +1641,20 @@
           const removeBtn = document.getElementById(`removeBtn${questionId}`);
           const removeQuestionBtn = newQuestion.querySelector('.remove-question');
           
-          uploadArea.addEventListener('click', () => imageInput.click());
-          imageInput.addEventListener('change', () => handleImageUpload(imageInput, questionId));
-          removeBtn.addEventListener('click', () => removeImage(questionId));
+          if (uploadArea) {
+            uploadArea.addEventListener('click', () => imageInput.click());
+            imageInput.addEventListener('change', () => handleImageUpload(imageInput, questionId));
+          }
+          if (removeBtn) {
+            removeBtn.addEventListener('click', () => removeImage(questionId));
+          }
           removeQuestionBtn.addEventListener('click', function() {
             if (document.querySelectorAll('.subtask-item').length > 1) {
+              // Удаляем изображение из Storage при удалении вопроса
+              const imageUrlInput = document.getElementById(`imageUrl${questionId}`);
+              if (imageUrlInput && imageUrlInput.value) {
+                deleteQuestionImage(imageUrlInput.value);
+              }
               newQuestion.remove();
             } else {
               alert('Должен остаться хотя бы один вопрос');
@@ -1586,6 +1703,8 @@
           document.getElementById('taskMonth').value = task.month_index;
           document.getElementById('taskTimeLimit').value = task.time_limit || 60;
           document.getElementById('taskPassingScore').value = task.passing_score;
+          document.getElementById('taskIsDemo').checked = task.is_demo || false;
+          document.getElementById('demoInfo').style.display = task.is_demo ? 'block' : 'none';
           editingTaskId = taskId;
           
           const questionsContainer = document.getElementById('questionsContainer');
@@ -1593,7 +1712,7 @@
           
           const questions = task.content?.questions || [];
           questions.forEach((q, i) => {
-            const questionId = generateQuestionId(); // Генерируем уникальный ID для каждого вопроса
+            const questionId = generateQuestionId();
             const questionDiv = document.createElement('div');
             questionDiv.className = 'subtask-item';
             questionDiv.setAttribute('data-type', q.type || 'mcq');
@@ -1635,7 +1754,37 @@
                   <div class="input-count">Количество полей: ${answers.length}</div>
                   <button type="button" class="btn btn-small add-fill-input">+ Добавить поле</button>
                 </div>
-                <button class="btn btn-small btn-danger remove-question">Удалить вопрос</button>
+                <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
+              `;
+            } else if (q.type === 'demo') {
+              questionDiv.innerHTML = `
+                <div class="form-group">
+                  <label>Текст демо-вопроса:</label>
+                  <input type="text" class="input question-text" value="${q.q || ''}" placeholder="Введите вопрос для примера">
+                </div>
+                <div class="form-group">
+                  <label>Изображение для демо-вопроса (опционально):</label>
+                  <div class="upload-area" id="uploadArea${questionId}" style="${q.image ? 'display:none' : ''}">
+                    <p>📁 Нажмите для загрузки изображения или перетащите файл сюда</p>
+                    <p class="small-muted">Поддерживаемые форматы: JPG, PNG, GIF (макс. 5MB)</p>
+                    <input type="file" id="imageInput${questionId}" style="display:none" accept="image/*">
+                  </div>
+                  <div class="upload-progress" id="progress${questionId}">
+                    <div class="upload-progress-bar" id="progressBar${questionId}"></div>
+                  </div>
+                  <input type="hidden" class="input question-image" id="imageUrl${questionId}" value="${q.image || ''}">
+                  <img class="image-preview" id="imagePreview${questionId}" alt="Предпросмотр изображения" style="display:${q.image ? 'block' : 'none'}" src="${q.image || ''}">
+                  <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
+                </div>
+                <div class="form-group">
+                  <label>Пример правильного ответа (будет показан ученикам):</label>
+                  <input type="text" class="input demo-answer" value="${q.demoAnswer || ''}" placeholder="Введите пример правильного ответа">
+                </div>
+                <div class="form-group">
+                  <label>Объяснение ответа (опционально):</label>
+                  <textarea class="input demo-explanation" placeholder="Объясните, почему это правильный ответ" rows="3">${q.explanation || ''}</textarea>
+                </div>
+                <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
               `;
             } else {
               questionDiv.innerHTML = `
@@ -1665,7 +1814,7 @@
                   <label>Правильный ответ (номер варианта, начиная с 1):</label>
                   <input type="number" class="input mcq-correct" min="1" value="${(q.correct || 0) + 1}">
                 </div>
-                <button class="btn btn-small btn-danger remove-question">Удалить вопрос</button>
+                <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
               `;
             }
             
@@ -1685,6 +1834,11 @@
             }
             removeQuestionBtn.addEventListener('click', function() {
               if (document.querySelectorAll('.subtask-item').length > 1) {
+                // Удаляем изображение из Storage при удалении вопроса
+                const imageUrlInput = document.getElementById(`imageUrl${questionId}`);
+                if (imageUrlInput && imageUrlInput.value) {
+                  deleteQuestionImage(imageUrlInput.value);
+                }
                 questionDiv.remove();
               } else {
                 alert('Должен остаться хотя бы один вопрос');
@@ -1721,6 +1875,7 @@
           const monthIndex = parseInt(document.getElementById('taskMonth').value);
           const timeLimit = parseInt(document.getElementById('taskTimeLimit').value);
           const passingScore = parseInt(document.getElementById('taskPassingScore').value);
+          const isDemo = document.getElementById('taskIsDemo').checked;
           
           if (!title) {
             alert('Введите название задания');
@@ -1739,7 +1894,6 @@
             const item = questionElements[i];
             const questionType = item.getAttribute('data-type') || 'mcq';
             const question = item.querySelector('.question-text').value;
-            // Получаем imageUrl по уникальному ID вопроса
             const questionId = item.getAttribute('data-id');
             const imageUrl = document.getElementById(`imageUrl${questionId}`)?.value || '';
             
@@ -1766,7 +1920,7 @@
                 options: options,
                 correct: correct
               });
-            } else {
+            } else if (questionType === 'fill') {
               const inputItems = item.querySelectorAll('.fill-input-item input');
               const answers = Array.from(inputItems).map(input => input.value.trim()).filter(val => val !== '');
               
@@ -1781,6 +1935,22 @@
                 image: imageUrl || null,
                 answers: answers
               });
+            } else if (questionType === 'demo') {
+              const demoAnswer = item.querySelector('.demo-answer').value;
+              const explanation = item.querySelector('.demo-explanation').value;
+              
+              if (!demoAnswer) {
+                alert('Введите пример правильного ответа для демо-вопроса');
+                return;
+              }
+              
+              questions.push({
+                type: 'demo',
+                q: question,
+                image: imageUrl || null,
+                demoAnswer: demoAnswer,
+                explanation: explanation
+              });
             }
           }
           
@@ -1788,9 +1958,12 @@
           
           const hasMcq = questions.some(q => q.type === 'mcq');
           const hasFill = questions.some(q => q.type === 'fill');
+          const hasDemo = questions.some(q => q.type === 'demo') || isDemo;
           
           let taskType = 'mcq';
-          if (hasMcq && hasFill) {
+          if (hasDemo) {
+            taskType = 'demo';
+          } else if (hasMcq && hasFill) {
             taskType = 'mixed';
           } else if (hasFill) {
             taskType = 'fill';
@@ -1806,7 +1979,8 @@
                   time_limit: timeLimit, 
                   type: taskType,
                   passing_score: passingScore, 
-                  content 
+                  content,
+                  is_demo: isDemo
                 })
                 .eq('id', editingTaskId);
                 
@@ -1826,7 +2000,8 @@
                   time_limit: timeLimit, 
                   type: taskType,
                   passing_score: passingScore, 
-                  content 
+                  content,
+                  is_demo: isDemo
                 }]);
                 
               if (error) {
@@ -1847,6 +2022,22 @@
           if (!confirm(`Вы уверены, что хотите удалить задание "${taskTitle}"?\n\nВсе связанные попытки также будут удалены.`)) return;
           
           try {
+            // Сначала получаем задание, чтобы удалить связанные изображения
+            const { data: task, error: fetchError } = await supabase
+              .from('tasks')
+              .select('content')
+              .eq('id', taskId)
+              .single();
+              
+            if (!fetchError && task && task.content && task.content.questions) {
+              // Удаляем все изображения из Storage
+              for (const question of task.content.questions) {
+                if (question.image) {
+                  await deleteQuestionImage(question.image);
+                }
+              }
+            }
+            
             const { error } = await supabase
               .from('tasks')
               .delete()

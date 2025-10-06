@@ -20,6 +20,52 @@
     .fill-label { display: block; margin-top: 15px; font-weight: 600; }
     .attempt-warning { background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #856404; }
     
+    /* Стили для демо-заданий */
+    .demo-task-info {
+      background: #e8f5e9;
+      border: 2px solid #4caf50;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .demo-answer-section {
+      background: #f3e5f5;
+      border: 2px solid #7b1fa2;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 15px;
+      display: none;
+    }
+    .demo-answer-show {
+      background: #7b1fa2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    .demo-answer-show:hover {
+      background: #6a1b9a;
+    }
+    .demo-explanation {
+      background: #e1f5fe;
+      border-left: 4px solid #0288d1;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 4px;
+    }
+    .demo-correct-answer {
+      background: #c8e6c9;
+      border: 2px solid #4caf50;
+      border-radius: 8px;
+      padding: 12px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    
     /* ОБНОВЛЕННЫЕ СТИЛИ ТАЙМЕРА - ФИКСИРОВАННЫЙ ВВЕРХУ */
     .fixed-timer-container {
       position: fixed;
@@ -138,6 +184,7 @@
     }
     .mcq-badge { background: #e3f2fd; color: #1976d2; }
     .fill-badge { background: #f3e5f5; color: #7b1fa2; }
+    .demo-badge { background: #fff3cd; color: #856404; }
     .task-type-info {
       background: #e7f3ff;
       border: 1px solid #b3d9ff;
@@ -278,6 +325,13 @@
       </div>
 
       <div class="card">
+        <!-- Информация о демо-задании -->
+        <div id="demoTaskInfo" class="demo-task-info" style="display: none;">
+          <h3>📚 Демо-задание</h3>
+          <p>Это пример задания для обучения. Вы можете просмотреть вопросы и правильные ответы.</p>
+          <p><strong>⚠️ Баллы за это задание не начисляются.</strong></p>
+        </div>
+        
         <div id="attemptWarning" class="attempt-warning" style="display: none;"></div>
         <div id="timeInfo" class="time-info" style="display: none;"></div>
         
@@ -296,6 +350,7 @@
         
         <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
           <button id="submitBtn" class="btn" style="display: none;">Отправить ответ</button>
+          <button id="showAnswersBtn" class="btn" style="display: none; background: #7b1fa2;">Показать ответы</button>
           <button class="btn secondary" onclick="location.href='/tasks.html'">Назад к заданиям</button>
         </div>
       </div>
@@ -347,8 +402,10 @@
         let timerInterval = null;
         let timeLimit = 60;
         let totalTime = 0;
+        let isDemoTask = false;
 
         const submitBtn = document.getElementById('submitBtn');
+        const showAnswersBtn = document.getElementById('showAnswersBtn');
         const taskBody = document.getElementById('taskBody');
         const attemptWarning = document.getElementById('attemptWarning');
         const timeInfo = document.getElementById('timeInfo');
@@ -359,6 +416,7 @@
         const taskLoadingElement = document.getElementById('taskLoading');
         const completedMessage = document.getElementById('completedMessage');
         const completedText = document.getElementById('completedText');
+        const demoTaskInfo = document.getElementById('demoTaskInfo');
 
         function showModal(title, text) {
           document.getElementById('modalTitle').textContent = title;
@@ -441,7 +499,7 @@
         }
 
         async function autoSubmit() {
-          if (!task || !attemptStarted) return;
+          if (!task || !attemptStarted || isDemoTask) return;
 
           let answers = {};
           const questions = task.content?.questions || [];
@@ -501,8 +559,18 @@
           taskLoadingElement.style.display = 'block';
           taskBody.style.display = 'none';
           submitBtn.style.display = 'none';
+          showAnswersBtn.style.display = 'none';
 
           try {
+            // Для демо-заданий не создаем попытку
+            if (isDemoTask) {
+              taskLoadingElement.style.display = 'none';
+              taskBody.style.display = 'block';
+              showAnswersBtn.style.display = 'inline-block';
+              renderTask();
+              return true;
+            }
+
             const { data, error } = await supabase.rpc('start_attempt', {
               _user_id: user.id,
               _task_id: taskId
@@ -556,6 +624,7 @@
             taskLoadingElement.style.display = 'none';
             taskBody.style.display = 'none';
             submitBtn.style.display = 'none';
+            showAnswersBtn.style.display = 'none';
             completedMessage.style.display = 'block';
             hideFixedTimer();
             
@@ -585,7 +654,13 @@
           
           task = taskData;
           timeLimit = task.time_limit || 60;
+          isDemoTask = task.is_demo || task.type === 'demo';
           
+          // Показываем информацию о демо-задании
+          if (isDemoTask) {
+            demoTaskInfo.style.display = 'block';
+          }
+
           const { data: key } = await supabase
             .from('keys')
             .select('*')
@@ -593,7 +668,7 @@
             .eq('month_index', task.month_index)
             .single();
           
-          if (key) {
+          if (key && !isDemoTask) {
             showCompletedAttempt();
             completedText.textContent = '🎉 Вы уже получили ключ за этот месяц!';
             return;
@@ -604,13 +679,22 @@
           const questionTypes = task.content?.questions?.map(q => q.type) || [];
           const hasMcq = questionTypes.includes('mcq');
           const hasFill = questionTypes.includes('fill');
+          const hasDemo = questionTypes.includes('demo');
           
           let typeText = '';
-          if (hasMcq && hasFill) typeText = '📝 Тест + ✍️ Письменный';
+          if (isDemoTask) typeText = '📚 Демо-задание';
+          else if (hasMcq && hasFill) typeText = '📝 Тест + ✍️ Письменный';
           else if (hasMcq) typeText = '📝 Тест';
           else if (hasFill) typeText = '✍️ Письменный';
+          else if (hasDemo) typeText = '📚 Демо';
           
           document.getElementById('subTitle').textContent = `${typeText} • Проходной балл: ${task.passing_score || 80}% • Лимит времени: ${timeLimit} мин`;
+
+          // Для демо-заданий не проверяем попытки
+          if (isDemoTask) {
+            await startAttempt();
+            return;
+          }
 
           const { data: attempt } = await supabase
             .from('attempts')
@@ -634,16 +718,19 @@
           // Добавляем информацию о типах вопросов
           const mcqCount = questions.filter(q => q.type === 'mcq').length;
           const fillCount = questions.filter(q => q.type === 'fill').length;
+          const demoCount = questions.filter(q => q.type === 'demo').length;
           
-          if (mcqCount > 0 && fillCount > 0) {
+          if ((mcqCount > 0 && fillCount > 0) || demoCount > 0) {
             const typeInfo = document.createElement('div');
             typeInfo.className = 'task-type-info';
-            typeInfo.innerHTML = `
-              <strong>ℹ️ Информация о задании:</strong><br>
-              • Тестовые вопросы (выбор ответа): ${mcqCount}<br>
-              • Письменные вопросы (ввод ответа): ${fillCount}<br>
-              <small>Отвечайте внимательно на все типы вопросов!</small>
-            `;
+            
+            let infoHTML = '<strong>ℹ️ Информация о задании:</strong><br>';
+            if (mcqCount > 0) infoHTML += `• Тестовые вопросы (выбор ответа): ${mcqCount}<br>`;
+            if (fillCount > 0) infoHTML += `• Письменные вопросы (ввод ответа): ${fillCount}<br>`;
+            if (demoCount > 0) infoHTML += `• Демо-вопросы (обучение): ${demoCount}<br>`;
+            infoHTML += '<small>Отвечайте внимательно на все типы вопросов!</small>';
+            
+            typeInfo.innerHTML = infoHTML;
             taskBody.appendChild(typeInfo);
           }
           
@@ -653,8 +740,19 @@
             
             // Добавляем бейдж типа вопроса
             const typeBadge = document.createElement('div');
-            typeBadge.className = `question-type-badge ${q.type === 'mcq' ? 'mcq-badge' : 'fill-badge'}`;
-            typeBadge.textContent = q.type === 'mcq' ? '📝 Тестовый вопрос' : '✍️ Вписать ответ';
+            let badgeClass = 'mcq-badge';
+            let badgeText = '📝 Тестовый вопрос';
+            
+            if (q.type === 'fill') {
+              badgeClass = 'fill-badge';
+              badgeText = '✍️ Вписать ответ';
+            } else if (q.type === 'demo') {
+              badgeClass = 'demo-badge';
+              badgeText = '📚 Демо-вопрос';
+            }
+            
+            typeBadge.className = `question-type-badge ${badgeClass}`;
+            typeBadge.textContent = badgeText;
             questionEl.appendChild(typeBadge);
             
             let questionHTML = `<p><b>${i + 1}. ${escapeHtml(q.q)}</b></p>`;
@@ -710,6 +808,23 @@
                     '<br>⚠️ <strong>Примечание:</strong> Заполните все поля. Каждое поле соответствует отдельному ответу.' : ''}
                 </div>
               `;
+            } else if (q.type === 'demo') {
+              // Демо-вопросы - показываем кнопку для просмотра ответа
+              questionHTML += `
+                <div class="demo-answer-section" id="demoAnswer${i}">
+                  <div class="demo-correct-answer">
+                    <strong>✅ Правильный ответ:</strong> ${escapeHtml(q.demoAnswer || 'Ответ не указан')}
+                  </div>
+                  ${q.explanation ? `
+                    <div class="demo-explanation">
+                      <strong>💡 Объяснение:</strong> ${escapeHtml(q.explanation)}
+                    </div>
+                  ` : ''}
+                </div>
+                <button type="button" class="demo-answer-show" onclick="document.getElementById('demoAnswer${i}').style.display='block'; this.style.display='none'">
+                  👁️ Показать ответ
+                </button>
+              `;
             }
             
             questionEl.innerHTML += questionHTML;
@@ -722,8 +837,11 @@
               if (e.key === 'Enter') {
                 // Находим кнопку отправки и кликаем её
                 const submitBtn = document.getElementById('submitBtn');
+                const showAnswersBtn = document.getElementById('showAnswersBtn');
                 if (submitBtn && !submitBtn.disabled) {
                   submitBtn.click();
+                } else if (showAnswersBtn && showAnswersBtn.style.display !== 'none') {
+                  showAnswersBtn.click();
                 }
               }
             });
@@ -737,8 +855,32 @@
           return div.innerHTML;
         }
 
+        // Функция для показа всех ответов в демо-задании
+        function showAllDemoAnswers() {
+          const questions = task.content?.questions || [];
+          questions.forEach((q, i) => {
+            if (q.type === 'demo') {
+              const answerSection = document.getElementById(`demoAnswer${i}`);
+              const showButton = answerSection?.previousElementSibling;
+              if (answerSection) {
+                answerSection.style.display = 'block';
+              }
+              if (showButton && showButton.classList.contains('demo-answer-show')) {
+                showButton.style.display = 'none';
+              }
+            }
+          });
+          showAnswersBtn.style.display = 'none';
+        }
+
         async function submitAnswers() {
           if (!task || !attemptStarted) return;
+
+          // Для демо-заданий просто показываем ответы
+          if (isDemoTask) {
+            showAllDemoAnswers();
+            return;
+          }
 
           let answers = {};
           const questions = task.content?.questions || [];
@@ -875,8 +1017,9 @@
           }
         });
 
-        // Назначаем обработчик кнопке отправки
+        // Назначаем обработчики кнопок
         submitBtn.onclick = submitAnswers;
+        showAnswersBtn.onclick = showAllDemoAnswers;
 
         await loadTask();
         showContent();
