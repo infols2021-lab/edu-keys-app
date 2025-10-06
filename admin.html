@@ -1623,8 +1623,15 @@
                 <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:none; margin-top:5px;">🗑️ Удалить изображение</button>
               </div>
               <div class="form-group">
-                <label>Пример правильного ответа (будет показан ученикам):</label>
-                <input type="text" class="input demo-answer" placeholder="Введите пример правильного ответа">
+                <label>Поля для правильных ответов (каждое поле — отдельный правильный ответ):</label>
+                <div class="fill-inputs-container">
+                  <div class="fill-input-item">
+                    <input type="text" class="input" placeholder="Правильный ответ для поля 1">
+                    <button type="button" class="remove-input-btn">🗑️</button>
+                  </div>
+                </div>
+                <div class="input-count">Количество полей: 1</div>
+                <button type="button" class="btn btn-small add-fill-input">+ Добавить поле</button>
               </div>
               <div class="form-group">
                 <label>Объяснение ответа (опционально):</label>
@@ -1757,6 +1764,15 @@
                 <button class="btn btn-small btn-danger remove-question">🗑️ Удалить вопрос</button>
               `;
             } else if (q.type === 'demo') {
+              // Поддержка старого формата с demoAnswer и нового с answers
+              const answers = q.answers || [q.demoAnswer || ''];
+              const inputsHTML = answers.map((answer, index) => `
+                <div class="fill-input-item">
+                  <input type="text" class="input" value="${escapeHtml(answer)}" placeholder="Правильный ответ для поля ${index + 1}">
+                  <button type="button" class="remove-input-btn">🗑️</button>
+                </div>
+              `).join('');
+              
               questionDiv.innerHTML = `
                 <div class="form-group">
                   <label>Текст демо-вопроса:</label>
@@ -1777,8 +1793,12 @@
                   <button type="button" class="btn btn-small btn-danger" id="removeBtn${questionId}" style="display:${q.image ? 'block' : 'none'}; margin-top:5px;">🗑️ Удалить изображение</button>
                 </div>
                 <div class="form-group">
-                  <label>Пример правильного ответа (будет показан ученикам):</label>
-                  <input type="text" class="input demo-answer" value="${q.demoAnswer || ''}" placeholder="Введите пример правильного ответа">
+                  <label>Поля для правильных ответов (каждое поле — отдельный правильный ответ):</label>
+                  <div class="fill-inputs-container">
+                    ${inputsHTML}
+                  </div>
+                  <div class="input-count">Количество полей: ${answers.length}</div>
+                  <button type="button" class="btn btn-small add-fill-input">+ Добавить поле</button>
                 </div>
                 <div class="form-group">
                   <label>Объяснение ответа (опционально):</label>
@@ -1936,11 +1956,12 @@
                 answers: answers
               });
             } else if (questionType === 'demo') {
-              const demoAnswer = item.querySelector('.demo-answer').value;
+              const inputItems = item.querySelectorAll('.fill-input-item input');
+              const answers = Array.from(inputItems).map(input => input.value.trim()).filter(val => val !== '');
               const explanation = item.querySelector('.demo-explanation').value;
               
-              if (!demoAnswer) {
-                alert('Введите пример правильного ответа для демо-вопроса');
+              if (answers.length === 0) {
+                alert('Введите хотя бы один правильный ответ для демо-вопроса');
                 return;
               }
               
@@ -1948,7 +1969,7 @@
                 type: 'demo',
                 q: question,
                 image: imageUrl || null,
-                demoAnswer: demoAnswer,
+                answers: answers,
                 explanation: explanation
               });
             }

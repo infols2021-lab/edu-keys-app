@@ -795,6 +795,7 @@
                 `;
               } else {
                 // Одно поле для ввода
+                const answer = Array.isArray(q.answers) ? q.answers[0] : (q.answer || '');
                 questionHTML += `
                   <label class="fill-label">Ваш ответ:</label>
                   <input type="text" class="fill-input" name="fill${i}" placeholder="Введите ваш ответ здесь..." autocomplete="off">
@@ -810,11 +811,33 @@
               `;
             } else if (q.type === 'demo') {
               // Демо-вопросы - показываем кнопку для просмотра ответа
+              const hasMultipleInputs = Array.isArray(q.answers) && q.answers.length > 1;
+              const answers = q.answers || [q.demoAnswer || ''];
+              
+              let answersHTML = '';
+              if (hasMultipleInputs) {
+                answersHTML = `
+                  <div class="fill-inputs-container">
+                    ${answers.map((answer, index) => `
+                      <div class="fill-input-item">
+                        <input type="text" class="fill-input" value="${escapeHtml(answer)}" readonly>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <div class="input-count">Количество полей: ${answers.length}</div>
+                `;
+              } else {
+                answersHTML = `
+                  <input type="text" class="fill-input" value="${escapeHtml(answers[0])}" readonly>
+                `;
+              }
+              
               questionHTML += `
                 <div class="demo-answer-section" id="demoAnswer${i}">
                   <div class="demo-correct-answer">
-                    <strong>✅ Правильный ответ:</strong> ${escapeHtml(q.demoAnswer || 'Ответ не указан')}
+                    <strong>✅ Правильные ответы:</strong>
                   </div>
+                  ${answersHTML}
                   ${q.explanation ? `
                     <div class="demo-explanation">
                       <strong>💡 Объяснение:</strong> ${escapeHtml(q.explanation)}
@@ -833,18 +856,20 @@
 
           // Добавляем обработчики для текстовых полей (Enter для быстрой отправки)
           document.querySelectorAll('.fill-input').forEach(input => {
-            input.addEventListener('keypress', function(e) {
-              if (e.key === 'Enter') {
-                // Находим кнопку отправки и кликаем её
-                const submitBtn = document.getElementById('submitBtn');
-                const showAnswersBtn = document.getElementById('showAnswersBtn');
-                if (submitBtn && !submitBtn.disabled) {
-                  submitBtn.click();
-                } else if (showAnswersBtn && showAnswersBtn.style.display !== 'none') {
-                  showAnswersBtn.click();
+            if (!input.readOnly) {
+              input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                  // Находим кнопку отправки и кликаем её
+                  const submitBtn = document.getElementById('submitBtn');
+                  const showAnswersBtn = document.getElementById('showAnswersBtn');
+                  if (submitBtn && !submitBtn.disabled) {
+                    submitBtn.click();
+                  } else if (showAnswersBtn && showAnswersBtn.style.display !== 'none') {
+                    showAnswersBtn.click();
+                  }
                 }
-              }
-            });
+              });
+            }
           });
         }
 
